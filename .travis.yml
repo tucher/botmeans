@@ -1,0 +1,18 @@
+language: go
+
+go:
+  - 1.7
+
+install:
+  - go get github.com/go-telegram-bot-api/telegram-bot-api
+  - go get github.com/jinzhu/gorm
+  - go get github.com/lib/pq
+
+services:
+  - postgresql
+
+before_script:
+  - psql -c 'create database MeansBot;' -U postgres
+  - psql -c 'SELECT datname FROM pg_database WHERE datistemplate = false;' -U postgres
+addons:
+  postgresql: "9.4"
