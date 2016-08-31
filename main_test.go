@@ -22,7 +22,9 @@ func TestMain(t *testing.T) {
 		t.Fatal(DBErr)
 	}
 	var err error
-	bot, err = New(DB, NetConfig{}, TelegramConfig{BotToken: "262455797:AAHssEUgkKCvvUI88e95OzRZPRc4r8vIlW4", WebhookHost: "accounterbot.tuchkov.org"})
+	bot, err = New(DB, NetConfig{}, TelegramConfig{BotToken: "262455797:AAHssEUgkKCvvUI88e95OzRZPRc4r8vIlW4",
+		WebhookHost: "accounterbot.tuchkov.org",
+		SSLCertFile: "./cert.pem"})
 	if err != nil {
 		t.Fatal(err)
 	}
