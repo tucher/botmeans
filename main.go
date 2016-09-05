@@ -20,6 +20,7 @@ type MeansBot struct {
 	db         *gorm.DB
 	Logger     *log.Logger
 	telegramID int64
+	BotName    string
 	netConfig  NetConfig
 	tlgConfig  TelegramConfig
 
@@ -199,24 +200,20 @@ func (ui *MeansBot) parseMentions(msg *tgbotapi.Message) (mentionedSessions []*T
 		switch ent.Type {
 		case "text_mention":
 			if ent.User != nil {
-				if abonentSession, err := ui.findOrCreateSession(msg.Chat.ID,
-					int64(ent.User.ID),
-					ent.User.UserName); err == nil {
-					mentionedSessions = append(mentionedSessions, abonentSession)
-				} else {
-					ui.Logger.Println(err)
-				}
+				mentionedSessions = append(mentionedSessions,
+					&TelegramUserSession{
+						TelegramChatID:   msg.Chat.ID,
+						TelegramUserID:   int64(ent.User.ID),
+						TelegramUserName: ent.User.UserName,
+					})
 			}
 		case "mention":
 			userName := msg.Text[ent.Offset+1 : ent.Offset+ent.Length]
-			if abonentSession, err := ui.findOrCreateSession(msg.Chat.ID,
-				0,
-				userName); err == nil {
-				mentionedSessions = append(mentionedSessions, abonentSession)
-			} else {
-				ui.Logger.Println(err)
-			}
-
+			mentionedSessions = append(mentionedSessions,
+				&TelegramUserSession{
+					TelegramChatID:   msg.Chat.ID,
+					TelegramUserName: userName,
+				})
 		}
 	}
 	return
@@ -296,7 +293,6 @@ func (ui *MeansBot) contextFromUpdate(upd *tgbotapi.Update) *CommandContext {
 		if int64(newMember.ID) == ui.telegramID {
 			ui.Logger.Printf("I've joined the group %v!", upd.Message.Chat.ID)
 		} else {
-			// ui.findOrCreateSession(msg.Chat.ID, int64(newMember.ID), newMember.UserName)
 		}
 	}
 
@@ -390,7 +386,7 @@ func (ui *MeansBot) SendMessages(session *TelegramUserSession, messagesToSent []
 		// t := time.Now()
 		if msg.TelegramMsgIDToEdit == 0 && msg.EditSelector == nil {
 			if err := ui.sendMessage(session, &renderedMsg); err != nil {
-				ui.Logger.Printf("Error sending message, %v, %+v", err, msg)
+				ui.Logger.Printf("Error sending message, %v, %+v", err, renderedMsg)
 			}
 			// ui.Logger.Println("New message sent in ", time.Since(t))
 		} else {
