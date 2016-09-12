@@ -14,5 +14,7 @@ services:
 before_script:
   - psql -c 'create database MeansBot;' -U postgres
   - psql -c 'SELECT datname FROM pg_database WHERE datistemplate = false;' -U postgres
+  - export MEANS_DB_USERNAME=postgres
+  - export MEANS_DBNAME=meansbot
 addons:
   postgresql: "9.4"
