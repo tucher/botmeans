@@ -15,6 +15,9 @@ var DBErr error
 var bot *MeansBot2
 
 func TestMain(t *testing.T) {
+	if os.Getenv("DONT_SKIP_MAIN") != "TRUE" {
+		return
+	}
 	DB, DBErr = gorm.Open("postgres", fmt.Sprintf("user=%v dbname=%v sslmode=disable password=%v",
 		string(os.Getenv("MEANS_DB_USERNAME")),
 		string(os.Getenv("MEANS_DBNAME")),
