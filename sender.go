@@ -2,8 +2,6 @@ package botmeans
 
 import (
 	"github.com/go-telegram-bot-api/telegram-bot-api"
-	// "log"
-	// "text/template"
 )
 
 //OutMsgFactoryInterface allows users to create or edit messages inside ActionHandlers
@@ -25,27 +23,13 @@ type Sendable interface {
 	Send() bool
 }
 
-// type notification struct {
-// 	id        string
-// 	showAlert bool
-// 	text      string
-// }
-
 //Sender implements SenderInterface
 type Sender struct {
-	msgFactory func() BotMessageInterface
-	session    SessionInterface
-	// outputMessages []msgMeta
-	// notifications  []notification
-	bot *tgbotapi.BotAPI
-	// templ       *template.Template
+	msgFactory  func() BotMessageInterface
+	session     SessionInterface
+	bot         *tgbotapi.BotAPI
 	templateDir string
 }
-
-// type msgMeta struct {
-// 	message BotMessageInterface
-// 	edit    bool
-// }
 
 //Create creates new telegram message from template
 func (f *Sender) Create(templateName string, Data interface{}) {
@@ -69,9 +53,7 @@ func (f *Sender) Create(templateName string, Data interface{}) {
 		}
 	}
 
-	// f.outputMessages = append(f.outputMessages, msgMeta{botMsg, false})
 	botMsg.Save()
-
 }
 
 //SimpleText creates new telegram message with given text
@@ -83,15 +65,11 @@ func (f *Sender) SimpleText(text string) {
 			botMsg.SetID(int64(sentMsg.MessageID))
 		}
 	}
-
-	// f.outputMessages = append(f.outputMessages, msgMeta{botMsg, false})
 	botMsg.Save()
 }
 
 //Notify creates notification for callback queries
 func (f *Sender) Notify(msg BotMessageInterface, callbackNotification string, showAlert bool) {
-	// f.notifications = append(f.notifications, notification{msg.CallbackID(), showAlert, callbackNotification})
-
 	f.bot.AnswerCallbackQuery(tgbotapi.CallbackConfig{
 		CallbackQueryID: msg.CallbackID(),
 		ShowAlert:       showAlert,
@@ -115,21 +93,4 @@ func (f *Sender) Edit(msg BotMessageInterface, templateName string, Data interfa
 		f.bot.Send(editConfig)
 	}
 	msg.Save()
-	// f.outputMessages = append(f.outputMessages, msgMeta{msg, true})
 }
-
-// //Send saves all sent messages and answers callbacks
-// func (f *Sender) Send() bool {
-// 	for _, msgMeta := range f.outputMessages {
-// 		msgMeta.message.Save()
-// 	}
-
-// 	for _, n := range f.notifications {
-// 		f.bot.AnswerCallbackQuery(tgbotapi.CallbackConfig{
-// 			CallbackQueryID: n.id,
-// 			ShowAlert:       n.showAlert,
-// 			Text:            n.text,
-// 		})
-// 	}
-// 	return true
-// }

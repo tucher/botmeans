@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/jinzhu/gorm"
-	"log"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -15,15 +13,10 @@ import (
 
 //MeansBot is a body of botmeans framework instance.
 type MeansBot struct {
-	bot        *tgbotapi.BotAPI
-	db         *gorm.DB
-	Logger     *log.Logger
-	telegramID int64
-	BotName    string
-	netConfig  NetConfig
-	tlgConfig  TelegramConfig
-
-	stopChan chan interface{}
+	bot       *tgbotapi.BotAPI
+	db        *gorm.DB
+	netConfig NetConfig
+	tlgConfig TelegramConfig
 }
 
 //NetConfig is a MeansBot network config for using with New function
@@ -37,6 +30,7 @@ type TelegramConfig struct {
 	BotToken    string
 	WebhookHost string
 	SSLCertFile string
+	BotName     string
 }
 
 //New creates new MeansBot instance
@@ -49,38 +43,25 @@ func New(DB *gorm.DB, netConfig NetConfig, tlgConfig TelegramConfig) (*MeansBot,
 		return &MeansBot{}, err
 	}
 
-	botID, _ := strconv.ParseInt(strings.Split(tlgConfig.BotToken, ":")[0], 10, 64)
-
 	ret := &MeansBot{
-		bot:        bot,
-		db:         DB,
-		Logger:     log.New(os.Stdout, "MeansBot: ", log.Llongfile|log.Ldate|log.Ltime),
-		telegramID: botID,
-		netConfig:  netConfig,
-		tlgConfig:  tlgConfig,
-		stopChan:   make(chan interface{}),
+		bot:       bot,
+		db:        DB,
+		netConfig: netConfig,
+		tlgConfig: tlgConfig,
 	}
 
 	ret.bot.RemoveWebhook()
 	_, err = ret.bot.SetWebhook(tgbotapi.NewWebhookWithCert(fmt.Sprintf("https://%v:8443/%v", ret.tlgConfig.WebhookHost, ret.bot.Token),
 		ret.tlgConfig.SSLCertFile))
-	if err != nil {
-		ret.Logger.Println("Failed to set webhook", err)
-	}
+
 	SessionInitDB(DB)
 	BotMessageInitDB(DB)
 
 	return ret, nil
 }
 
-//Stop function stops the bot, which was started by Run
-func (ui *MeansBot) Stop() {
-	ui.stopChan <- struct{}{}
-}
-
-//Run starts updates handling
-func (ui *MeansBot) Run(handlersProvider ActionHandlersProvider, templateDir string) error {
-
+//Run starts updates handling. Returns stop chan
+func (ui *MeansBot) Run(handlersProvider ActionHandlersProvider, templateDir string) chan interface{} {
 	actionFactory := func(
 		session SessionInterface,
 		cmdGetter func() string,
@@ -94,9 +75,8 @@ func (ui *MeansBot) Run(handlersProvider ActionHandlersProvider, templateDir str
 			argsGetter,
 			sourceMessageGetter,
 			&Sender{
-				session: session,
-				bot:     ui.bot,
-				// templ:       getTemplater(),
+				session:     session,
+				bot:         ui.bot,
 				templateDir: templateDir,
 				msgFactory:  func() BotMessageInterface { return NewBotMessage(session.ChatId(), ui.db) },
 			},
@@ -104,26 +84,22 @@ func (ui *MeansBot) Run(handlersProvider ActionHandlersProvider, templateDir str
 			handlersProvider,
 		)
 	}
-
+	botID, _ := strconv.ParseInt(strings.Split(ui.bot.Token, ":")[0], 10, 64)
 	sessionFactory := func(base SessionBase) (SessionInterface, error) {
-		return SessionLoader(base, ui.db, ui.BotName, ui.telegramID, ui.bot)
+		return SessionLoader(base, ui.db, botID, ui.bot)
 	}
-
 	aliaser := AliaserFromTemplateDir(templateDir)
-
 	argsParser := func(tgUpdate tgbotapi.Update) []ArgInterface {
 		return ArgsParser(tgUpdate, sessionFactory, aliaser)
 	}
-
 	cmdParser := func(tgUpdate tgbotapi.Update) string {
 		return CmdParser(tgUpdate, aliaser)
 	}
-
 	botMsgFactory := func(chatID int64, msgId int64, callbackID string) BotMessageInterface {
 		return BotMessageDBLoader(chatID, msgId, callbackID, ui.db)
 	}
-
 	updatesChan := ui.bot.ListenForWebhook("/" + ui.bot.Token)
+
 	go http.ListenAndServe(fmt.Sprintf("%v:%v", ui.netConfig.ListenIP, ui.netConfig.ListenPort), nil)
 
 	actionsChan := createTGUpdatesParser(
@@ -134,7 +110,5 @@ func (ui *MeansBot) Run(handlersProvider ActionHandlersProvider, templateDir str
 		cmdParser,
 		argsParser,
 	)
-
-	ui.stopChan = RunMachine(actionsChan, time.Minute)
-	return nil
+	return RunMachine(actionsChan, time.Minute)
 }

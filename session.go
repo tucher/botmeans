@@ -92,7 +92,7 @@ func SessionInitDB(db *gorm.DB) {
 }
 
 //SessionLoader creates the session and loads the data if the session exists
-func SessionLoader(base SessionBase, db *gorm.DB, BotName string, BotID int64, api *tgbotapi.BotAPI) (SessionInterface, error) {
+func SessionLoader(base SessionBase, db *gorm.DB, BotID int64, api *tgbotapi.BotAPI) (SessionInterface, error) {
 	TelegramUserID := base.TelegramUserID
 	TelegramUserName := base.TelegramUserName
 	TelegramChatID := base.TelegramChatID
@@ -100,7 +100,7 @@ func SessionLoader(base SessionBase, db *gorm.DB, BotName string, BotID int64, a
 		return nil, fmt.Errorf("Invalid session IDs")
 	}
 	//TODO!
-	if TelegramUserID == BotID || TelegramUserName == BotName {
+	if TelegramUserID == BotID {
 		return nil, fmt.Errorf("Cannot create the session for myself")
 	}
 	session := &Session{}

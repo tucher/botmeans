@@ -34,7 +34,7 @@ func TestSession(t *testing.T) {
 		t.Errorf("Saving error %v", err)
 	}
 
-	loaded, _ := SessionLoader(SessionBase{123, "john", 123, false, false}, DB, "", 0, nil)
+	loaded, _ := SessionLoader(SessionBase{123, "john", 123, false, false}, DB, 0, nil)
 	if loaded.IsNew() != false {
 		t.Error("Should be false")
 	}
@@ -54,7 +54,7 @@ func TestSession(t *testing.T) {
 		t.Error("Should be 1234")
 	}
 
-	loaded, _ = SessionLoader(SessionBase{124, "john2", 123, false, false}, DB, "", 0, nil)
+	loaded, _ = SessionLoader(SessionBase{124, "john2", 123, false, false}, DB, 0, nil)
 	if loaded.IsNew() != true {
 		t.Error("Should be true")
 	}
