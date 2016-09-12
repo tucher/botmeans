@@ -14,6 +14,7 @@ var DB *gorm.DB
 var DBErr error
 
 var bot *botmeans.MeansBot
+var contextChan chan botmeans.ActionContextInterface
 
 func handlersProvider(id string) (ret botmeans.ActionHandler, ok bool) {
 	ok = true
@@ -63,7 +64,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	contextChan := make(chan botmeans.ActionContextInterface)
+	contextChan = make(chan botmeans.ActionContextInterface)
 
 	bot.Run(handlersProvider, "")
 	// enoughChan := time.After(time.Second * 2)

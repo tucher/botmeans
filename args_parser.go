@@ -59,13 +59,37 @@ func (a Arg) LeftSession() bool {
 //CommandAliaser converts any text to cmd and args
 type CommandAliaser func(string) (string, []ArgInterface, bool)
 
+type mention struct {
+	t string
+	s SessionInterface
+}
+
+func extractMentions(tgUpdate tgbotapi.Update, sessionFactory SessionFactory) (mentions []mention) {
+	if tgUpdate.Message.Entities != nil {
+		for _, ent := range *tgUpdate.Message.Entities {
+			switch {
+			case ent.Type == "text_mention" && ent.User != nil:
+
+				if s, err := sessionFactory(SessionBase{int64(ent.User.ID), ent.User.UserName, tgUpdate.Message.Chat.ID, false, false}); err != nil {
+
+					mentions = append(mentions, mention{string([]rune(tgUpdate.Message.Text)[ent.Offset : ent.Offset+ent.Length]), s})
+				}
+
+			case ent.Type == "mention":
+				userName := string([]rune(tgUpdate.Message.Text)[ent.Offset+1 : ent.Offset+ent.Length])
+				if s, err := sessionFactory(SessionBase{0, userName, tgUpdate.Message.Chat.ID, false, false}); err != nil {
+					mentions = append(mentions, mention{string([]rune(tgUpdate.Message.Text)[ent.Offset : ent.Offset+ent.Length]), s})
+				}
+			}
+		}
+	}
+	return
+}
+
 //ArgsParser parses arguments from Update
 func ArgsParser(tgUpdate tgbotapi.Update, sessionFactory SessionFactory, aliaser CommandAliaser) []ArgInterface {
 	text := ""
-	type mention struct {
-		t string
-		s SessionInterface
-	}
+
 	mentions := []mention{}
 
 	switch {
@@ -80,24 +104,7 @@ func ArgsParser(tgUpdate tgbotapi.Update, sessionFactory SessionFactory, aliaser
 			s, _ := sessionFactory(SessionBase{int64(tgUpdate.Message.LeftChatMember.ID), tgUpdate.Message.LeftChatMember.UserName, tgUpdate.Message.Chat.ID, false, true})
 			return []ArgInterface{Arg{s}}
 		}
-		if tgUpdate.Message.Entities != nil {
-			for _, ent := range *tgUpdate.Message.Entities {
-				switch {
-				case ent.Type == "text_mention" && ent.User != nil:
-
-					if s, err := sessionFactory(SessionBase{int64(ent.User.ID), ent.User.UserName, tgUpdate.Message.Chat.ID, false, false}); err != nil {
-
-						mentions = append(mentions, mention{string([]rune(text)[ent.Offset : ent.Offset+ent.Length]), s})
-					}
-
-				case ent.Type == "mention":
-					userName := string([]rune(text)[ent.Offset+1 : ent.Offset+ent.Length])
-					if s, err := sessionFactory(SessionBase{0, userName, tgUpdate.Message.Chat.ID, false, false}); err != nil {
-						mentions = append(mentions, mention{string([]rune(text)[ent.Offset : ent.Offset+ent.Length]), s})
-					}
-				}
-			}
-		}
+		mentions = extractMentions(tgUpdate, sessionFactory)
 	case tgUpdate.CallbackQuery != nil:
 		text = tgUpdate.CallbackQuery.Data
 	}
