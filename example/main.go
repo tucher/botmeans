@@ -29,7 +29,7 @@ func main() {
 	DB.DropTable(&botmeans.BotMessage{})
 
 	var err error
-	bot, err = botmeans.New2(DB, botmeans.NetConfig{ListenIP: "0.0.0.0", ListenPort: 7654}, botmeans.TelegramConfig{BotToken: os.Getenv("BOT_TOKEN"),
+	bot, err = botmeans.New(DB, botmeans.NetConfig{ListenIP: "0.0.0.0", ListenPort: 7654}, botmeans.TelegramConfig{BotToken: os.Getenv("BOT_TOKEN"),
 		WebhookHost: os.Getenv("HOST"),
 		SSLCertFile: "../cert.pem"})
 	if err != nil {

@@ -53,13 +53,12 @@ func (session *Session) GetData(value interface{}) {
 	deserialize(session.UserData, value)
 }
 
-//GetData extracts internal UserData field to given value
+//Save saves the session to sql table
 func (session *Session) Save() error {
 	if session.db != nil {
 		return session.db.Save(session).Error
-	} else {
-		return fmt.Errorf("db not set")
 	}
+	return fmt.Errorf("db not set")
 }
 
 //Locale returns the locale for this user

@@ -15,7 +15,7 @@ type ArgInterface interface {
 	LeftSession() bool
 }
 
-//ArgInterface implementation
+//Arg is a ArgInterface implementation
 type Arg struct {
 	arg interface{}
 }
@@ -135,7 +135,7 @@ func ArgsParser(tgUpdate tgbotapi.Update, sessionFactory SessionFactory, aliaser
 	return retArgs
 }
 
-//ArgsParser parses command from Update
+//CmdParser parses command from Update
 func CmdParser(tgUpdate tgbotapi.Update, aliaser CommandAliaser) string {
 	text := ""
 

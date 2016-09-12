@@ -26,7 +26,7 @@ type BotMessage struct {
 	Timestamp      time.Time
 }
 
-//Set sets internal UserData field to JSON representation of given value.
+//SetData sets internal UserData field to JSON representation of given value.
 //Automatically saves information for the value's type, so you don't need to care about it.
 //Just use the same types of value for SetData and GetData
 func (botMessage *BotMessage) SetData(value interface{}) {
@@ -42,9 +42,8 @@ func (botMessage *BotMessage) GetData(value interface{}) {
 func (botMessage *BotMessage) Save() error {
 	if botMessage.db != nil {
 		return botMessage.db.Save(botMessage).Error
-	} else {
-		return fmt.Errorf("db not set")
 	}
+	return fmt.Errorf("db not set")
 }
 
 //BotMessageInitDB prepares sql tables for BotMessage

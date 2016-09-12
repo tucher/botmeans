@@ -170,7 +170,7 @@ func TestUpdatesParser(t *testing.T) {
 						fail = true
 						t.Log("Wrong args len", action.argsGetter(), testEntry.result[lastIndex].argsGetter())
 					} else {
-						for i, _ := range action.argsGetter() {
+						for i := range action.argsGetter() {
 							if action.argsGetter()[i] != testEntry.result[lastIndex].argsGetter()[i] && action.argsGetter()[i].NewSession() != true {
 								fail = true
 								t.Log("Wrong arg: ", action.argsGetter()[i], testEntry.result[lastIndex].argsGetter()[i])

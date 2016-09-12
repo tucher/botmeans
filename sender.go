@@ -20,7 +20,7 @@ type SenderInterface interface {
 	Sendable
 }
 
-//Defines something that can be Send
+//Sendable defines something that can be Send
 type Sendable interface {
 	Send() bool
 }

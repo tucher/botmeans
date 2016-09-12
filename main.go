@@ -1,5 +1,4 @@
 // Package botmeans provides a framework for creation of complex high-loaded Telegram bots with rich behaviour
-
 package botmeans
 
 import (
@@ -27,13 +26,13 @@ type MeansBot struct {
 	stopChan chan interface{}
 }
 
-// //NetConfig is a MeansBot network config for using with New function
+//NetConfig is a MeansBot network config for using with New function
 type NetConfig struct {
 	ListenIP   string
 	ListenPort int16
 }
 
-// //TelegramConfig is a MeansBot telegram API config for using with New function
+//TelegramConfig is a MeansBot telegram API config for using with New function
 type TelegramConfig struct {
 	BotToken    string
 	WebhookHost string

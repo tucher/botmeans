@@ -119,7 +119,7 @@ func (a *Action) Output() OutMsgFactoryInterface {
 	return a.sender
 }
 
-//Output allow user to access finish command processing inside ActionHandler through the Context()
+//Finish allow user to access finish command processing inside ActionHandler through the Context()
 func (a *Action) Finish() {
 	a.LastCommand = ""
 }

@@ -10,7 +10,7 @@ type Executer interface {
 	Execute()
 }
 
-//creates the machine, which executes Executers in parallel, but Executers with the same id are executed serially
+//RunMachine creates the machine, which executes Executers in parallel, but Executers with the same id are executed serially
 func RunMachine(queueStream chan Executer, interval time.Duration) chan interface{} {
 	stopChan := make(chan interface{})
 	queueChanMap := make(map[int64]chan Executer)
