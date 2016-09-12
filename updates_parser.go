@@ -39,13 +39,18 @@ type CmdParserFunc func(tgbotapi.Update) string
 //ArgsParserFunc returns args of command for the given update
 type ArgsParserFunc func(tgbotapi.Update) []ArgInterface
 
+type parserConfig struct {
+	sessionFactory        SessionFactory
+	actionExecuterFactory ActionExecuterFactory
+	botMessageFactory     BotMessageFactory
+	cmdParser             CmdParserFunc
+	argsParser            ArgsParserFunc
+}
+
 func createTGUpdatesParser(
 	tgUpdateChan <-chan tgbotapi.Update,
-	sessionFactory SessionFactory,
-	actionExecuterFactory ActionExecuterFactory,
-	botMessageFactory BotMessageFactory,
-	cmdParser CmdParserFunc,
-	argsParser ArgsParserFunc) chan Executer {
+	pC parserConfig,
+) chan Executer {
 
 	cmdQueueChan := make(chan Executer)
 	go func() {
@@ -81,14 +86,14 @@ func createTGUpdatesParser(
 
 				}
 
-				session, _ := sessionFactory(SessionBase{TelegramUserID: userId, TelegramUserName: username, TelegramChatID: chatId})
+				session, _ := pC.sessionFactory(SessionBase{TelegramUserID: userId, TelegramUserName: username, TelegramChatID: chatId})
 
-				actionExecuterFactory(
+				pC.actionExecuterFactory(
 					session,
 					actionExecuterFactoryConfig{
-						func() string { return cmdParser(tgUpdate) },
-						func() []ArgInterface { return argsParser(tgUpdate) },
-						func() BotMessageInterface { return botMessageFactory(chatId, msgId, callbackID) },
+						func() string { return pC.cmdParser(tgUpdate) },
+						func() []ArgInterface { return pC.argsParser(tgUpdate) },
+						func() BotMessageInterface { return pC.botMessageFactory(chatId, msgId, callbackID) },
 					},
 					cmdQueueChan)
 				wg.Done()

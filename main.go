@@ -100,11 +100,13 @@ func (ui *MeansBot) Run(handlersProvider ActionHandlersProvider, templateDir str
 
 	actionsChan := createTGUpdatesParser(
 		updatesChan,
-		sessionFactory,
-		actionFactory,
-		botMsgFactory,
-		cmdParser,
-		argsParser,
+		parserConfig{
+			sessionFactory,
+			actionFactory,
+			botMsgFactory,
+			cmdParser,
+			argsParser,
+		},
 	)
 	return RunMachine(actionsChan, time.Minute)
 }

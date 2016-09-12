@@ -64,11 +64,13 @@ func TestUpdatesParser(t *testing.T) {
 
 	actionsChan := createTGUpdatesParser(
 		updatesChan,
-		sessionFactory,
-		actionFactory,
-		botMsgFactory,
-		cmdParser,
-		argsParser,
+		parserConfig{
+			sessionFactory,
+			actionFactory,
+			botMsgFactory,
+			cmdParser,
+			argsParser,
+		},
 	)
 	type TestEntry struct {
 		tgUpdate tgbotapi.Update

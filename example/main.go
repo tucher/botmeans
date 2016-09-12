@@ -15,6 +15,33 @@ var DBErr error
 
 var bot *botmeans.MeansBot
 
+func handlersProvider(id string) (ret botmeans.ActionHandler, ok bool) {
+	ok = true
+	switch id {
+	case "cmd1":
+		ret = func(context botmeans.ActionContextInterface) {
+			log.Print("Cmd1 Command")
+			contextChan <- context
+			if len(context.Args()) == 1 {
+				if s, _ := context.Args()[0].String(); s == "end" {
+					context.Finish()
+				}
+			}
+			context.Output().SimpleText(fmt.Sprintf("Session: (%+v)", context.Session()))
+		}
+
+	case "":
+		ret = func(context botmeans.ActionContextInterface) {
+			log.Println("Empty Command")
+			contextChan <- context
+			context.Output().SimpleText(fmt.Sprintf("Session: (%+v)", context.Session()))
+		}
+	default:
+		ok = false
+	}
+	return
+}
+
 func main() {
 	log.SetFlags(log.Llongfile)
 	DB, DBErr = gorm.Open("postgres", fmt.Sprintf("user=%v dbname=%v sslmode=disable password=%v",
@@ -37,32 +64,7 @@ func main() {
 	}
 
 	contextChan := make(chan botmeans.ActionContextInterface)
-	handlersProvider := func(id string) (ret botmeans.ActionHandler, ok bool) {
-		ok = true
-		switch id {
-		case "cmd1":
-			ret = func(context botmeans.ActionContextInterface) {
-				log.Print("Cmd1 Command")
-				contextChan <- context
-				if len(context.Args()) == 1 {
-					if s, _ := context.Args()[0].String(); s == "end" {
-						context.Finish()
-					}
-				}
-				context.Output().SimpleText(fmt.Sprintf("Session: (%+v)", context.Session()))
-			}
 
-		case "":
-			ret = func(context botmeans.ActionContextInterface) {
-				log.Println("Empty Command")
-				contextChan <- context
-				context.Output().SimpleText(fmt.Sprintf("Session: (%+v)", context.Session()))
-			}
-		default:
-			ok = false
-		}
-		return
-	}
 	bot.Run(handlersProvider, "")
 	// enoughChan := time.After(time.Second * 2)
 	for {
