@@ -48,9 +48,11 @@ func TestActionExecute(t *testing.T) {
 	sender := &Sender{session: session, msgFactory: func() BotMessageInterface { return &BotMessage{} }}
 	go ActionFactory(
 		session,
-		func() string { return "cmd1" },
-		func() []ArgInterface { return []ArgInterface{Arg{"/cmd1"}, Arg{"ffuuu"}, Arg{9.75}} },
-		func() BotMessageInterface { return &BotMessage{} },
+		actionExecuterFactoryConfig{
+			func() string { return "cmd1" },
+			func() []ArgInterface { return []ArgInterface{Arg{"/cmd1"}, Arg{"ffuuu"}, Arg{9.75}} },
+			func() BotMessageInterface { return &BotMessage{} },
+		},
 		sender,
 		out,
 		handlersProvider,

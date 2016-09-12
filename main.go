@@ -64,16 +64,12 @@ func New(DB *gorm.DB, netConfig NetConfig, tlgConfig TelegramConfig) (*MeansBot,
 func (ui *MeansBot) Run(handlersProvider ActionHandlersProvider, templateDir string) chan interface{} {
 	actionFactory := func(
 		session SessionInterface,
-		cmdGetter func() string,
-		argsGetter func() []ArgInterface,
-		sourceMessageGetter func() BotMessageInterface,
+		getters actionExecuterFactoryConfig,
 		out chan Executer,
 	) {
 		ActionFactory(
 			session,
-			cmdGetter,
-			argsGetter,
-			sourceMessageGetter,
+			getters,
 			&Sender{
 				session:     session,
 				bot:         ui.bot,

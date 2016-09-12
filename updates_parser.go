@@ -26,9 +26,7 @@ type SessionFactory func(base SessionBase) (SessionInterface, error)
 //ActionExecuterFactory creates Executers from given session, cmd, args and source message
 type ActionExecuterFactory func(
 	SessionInterface,
-	func() string,
-	func() []ArgInterface,
-	func() BotMessageInterface,
+	actionExecuterFactoryConfig,
 	chan Executer,
 )
 
@@ -87,9 +85,11 @@ func createTGUpdatesParser(
 
 				actionExecuterFactory(
 					session,
-					func() string { return cmdParser(tgUpdate) },
-					func() []ArgInterface { return argsParser(tgUpdate) },
-					func() BotMessageInterface { return botMessageFactory(chatId, msgId, callbackID) },
+					actionExecuterFactoryConfig{
+						func() string { return cmdParser(tgUpdate) },
+						func() []ArgInterface { return argsParser(tgUpdate) },
+						func() BotMessageInterface { return botMessageFactory(chatId, msgId, callbackID) },
+					},
 					cmdQueueChan)
 				wg.Done()
 			}()
@@ -98,4 +98,10 @@ func createTGUpdatesParser(
 		close(cmdQueueChan)
 	}()
 	return cmdQueueChan
+}
+
+type actionExecuterFactoryConfig struct {
+	cmdGetter       func() string
+	argsGetter      func() []ArgInterface
+	sourceMsgGetter func() BotMessageInterface
 }

@@ -9,32 +9,31 @@ type ActionHandlersProvider func(id string) (ActionHandler, bool)
 //ActionFactory generates Executers
 func ActionFactory(
 	session SessionInterface,
-	cmdGetter func() string,
-	argsGetter func() []ArgInterface,
-	sourceMessageGetter func() BotMessageInterface,
+	getters actionExecuterFactoryConfig,
 	sender SenderInterface,
 	out chan Executer,
 	handlersProvider ActionHandlersProvider,
 ) {
 	if session.IsNew() {
+
 		out <- &Action{
-			session:             session,
-			handlersProvider:    handlersProvider,
-			sourceMessageGetter: func() (r BotMessageInterface) { return },
-			argsGetter:          func() []ArgInterface { return append([]ArgInterface{Arg{session}}, argsGetter()...) },
-			cmdGetter:           func() string { return "" },
-			sender:              sender,
+			session:          session,
+			handlersProvider: handlersProvider,
+			getters: actionExecuterFactoryConfig{
+				cmdGetter:       func() string { return "" },
+				argsGetter:      func() []ArgInterface { return append([]ArgInterface{Arg{session}}, getters.argsGetter()...) },
+				sourceMsgGetter: func() (r BotMessageInterface) { return },
+			},
+			sender: sender,
 		}
 	}
-	if _, ok := handlersProvider(cmdGetter()); ok == true {
+	if _, ok := handlersProvider(getters.cmdGetter()); ok == true {
 
 		ret := &Action{
-			session:             session,
-			handlersProvider:    handlersProvider,
-			sourceMessageGetter: sourceMessageGetter,
-			argsGetter:          argsGetter,
-			cmdGetter:           cmdGetter,
-			sender:              sender,
+			session:          session,
+			handlersProvider: handlersProvider,
+			getters:          getters,
+			sender:           sender,
 		}
 		session.GetData(ret)
 		out <- ret
@@ -48,13 +47,11 @@ func ActionFactory(
 type Action struct {
 	session     SessionInterface
 	LastCommand string
+	getters     actionExecuterFactoryConfig
 
-	cmdGetter           func() string
-	argsGetter          func() []ArgInterface
-	sourceMessageGetter func() BotMessageInterface
-	handlersProvider    ActionHandlersProvider
-	sender              SenderInterface
-	err                 interface{}
+	handlersProvider ActionHandlersProvider
+	sender           SenderInterface
+	err              interface{}
 }
 
 //Execute implements Execute for BotMachine
@@ -70,7 +67,7 @@ func (a *Action) Execute() {
 		}
 	}()
 	ok := false
-	cmd := a.cmdGetter()
+	cmd := a.getters.cmdGetter()
 	if _, ok = a.handlersProvider(cmd); ok == true && cmd != "" {
 		a.LastCommand = cmd
 	} else if _, ok = a.handlersProvider(a.LastCommand); ok == true {
@@ -94,7 +91,7 @@ func (a *Action) Id() int64 {
 
 //Args allow user to access command  args inside ActionHandler through the Context()
 func (a *Action) Args() []ArgInterface {
-	return a.argsGetter()
+	return a.getters.argsGetter()
 }
 
 //Error allow user to terminate ActionHandler through the Context()
@@ -111,7 +108,7 @@ func (a *Action) Session() SessionInterface {
 
 //SourceMessage allow user to access the session inside ActionHandler through the Context()
 func (a *Action) SourceMessage() BotMessageInterface {
-	return a.sourceMessageGetter()
+	return a.getters.sourceMsgGetter()
 }
 
 //Output allow user to access the OutMsgFactoryInterface inside ActionHandler through the Context()
