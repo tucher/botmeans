@@ -31,25 +31,33 @@ type MessageButton struct {
 	Args    string
 }
 
+type tgMsgParams struct {
+	ParseMode       string
+	text            string
+	inlineKbdMarkup *tgbotapi.InlineKeyboardMarkup
+	replyKbdMarkup  *tgbotapi.ReplyKeyboardMarkup
+}
+
 func renderFromTemplate(
 	templateDir string,
 	templateName string,
 	locale string,
 	Data interface{},
-) (string, string, *tgbotapi.InlineKeyboardMarkup, *tgbotapi.ReplyKeyboardMarkup) {
+) tgMsgParams {
+	ret := tgMsgParams{}
 	templ := getTemplater()
 	msgTemplate, err := readMsgTemplate(templateDir + "/" + templateName + ".json")
 	if err != nil {
-		return "", "", nil, nil
+		return ret
 	}
-	ParseMode := msgTemplate.ParseMode
+	ret.ParseMode = msgTemplate.ParseMode
 	if _, ok := msgTemplate.Template[locale]; !ok {
 		locale = ""
 	}
-	text, _ := renderText(msgTemplate.Template[locale], Data, templ)
-	inlineKbdMarkup := createInlineKeyboard(msgTemplate.Keyboard[locale])
-	replyKbdMarkup := createReplyKeyboard(msgTemplate.ReplyKeyboard[locale])
-	return ParseMode, text, inlineKbdMarkup, replyKbdMarkup
+	ret.text, _ = renderText(msgTemplate.Template[locale], Data, templ)
+	ret.inlineKbdMarkup = createInlineKeyboard(msgTemplate.Keyboard[locale])
+	ret.replyKbdMarkup = createReplyKeyboard(msgTemplate.ReplyKeyboard[locale])
+	return ret
 }
 
 func readMsgTemplate(path string) (ret MessageTemplate, err error) {

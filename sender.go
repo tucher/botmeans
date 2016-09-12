@@ -36,16 +36,16 @@ func (f *Sender) Create(templateName string, Data interface{}) {
 	botMsg := f.msgFactory()
 	botMsg.SetData(Data)
 
-	ParseMode, text, inlineKbdMarkup, replyKbdMarkup := renderFromTemplate(f.templateDir, templateName, f.session.Locale(), Data)
+	params := renderFromTemplate(f.templateDir, templateName, f.session.Locale(), Data)
 
-	toSent := tgbotapi.NewMessage(f.session.ChatId(), text)
-	toSent.ParseMode = ParseMode
-	if replyKbdMarkup != nil {
-		toSent.ReplyMarkup = *replyKbdMarkup
+	toSent := tgbotapi.NewMessage(f.session.ChatId(), params.text)
+	toSent.ParseMode = params.ParseMode
+	if params.replyKbdMarkup != nil {
+		toSent.ReplyMarkup = *params.replyKbdMarkup
 	}
 
-	if inlineKbdMarkup != nil {
-		toSent.ReplyMarkup = *inlineKbdMarkup
+	if params.inlineKbdMarkup != nil {
+		toSent.ReplyMarkup = *params.inlineKbdMarkup
 	}
 	if f.bot != nil {
 		if sentMsg, err := f.bot.Send(toSent); err == nil {
@@ -80,14 +80,14 @@ func (f *Sender) Notify(msg BotMessageInterface, callbackNotification string, sh
 //Edit allows to edit existing messages
 func (f *Sender) Edit(msg BotMessageInterface, templateName string, Data interface{}) {
 	msg.SetData(Data)
-	ParseMode, text, inlineKbdMarkup, _ := renderFromTemplate(f.templateDir, templateName, f.session.Locale(), Data)
+	params := renderFromTemplate(f.templateDir, templateName, f.session.Locale(), Data)
 
-	editConfig := tgbotapi.NewEditMessageText(f.session.ChatId(), int(msg.Id()), text)
+	editConfig := tgbotapi.NewEditMessageText(f.session.ChatId(), int(msg.Id()), params.text)
 
-	if inlineKbdMarkup != nil {
-		editConfig.ReplyMarkup = inlineKbdMarkup
+	if params.inlineKbdMarkup != nil {
+		editConfig.ReplyMarkup = params.inlineKbdMarkup
 	}
-	editConfig.ParseMode = ParseMode
+	editConfig.ParseMode = params.ParseMode
 
 	if f.bot != nil {
 		f.bot.Send(editConfig)
