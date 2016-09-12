@@ -62,34 +62,39 @@ type retStruct struct {
 	Args []ArgInterface
 }
 
+func handleRow(row []MessageButton, ret map[string]retStruct) {
+	for _, button := range row {
+		cmd := button.Command
+		text := button.Args
+		Args := []ArgInterface{}
+
+		splitted := []string{}
+		for _, a := range strings.Split(text, " ") {
+			trimmed := strings.TrimSpace(a)
+			if len(trimmed) > 0 {
+				splitted = append(splitted, trimmed)
+			}
+		}
+
+		for _, str := range splitted {
+			if val, ok := strconv.ParseFloat(str, 64); ok == nil {
+				Args = append(Args, Arg{val})
+			} else {
+				Args = append(Args, Arg{str})
+			}
+		}
+		ret[button.Text] = struct {
+			Cmd  string
+			Args []ArgInterface
+		}{cmd, Args}
+	}
+}
+
 func handleTemplate(template MessageTemplate, ret map[string]retStruct) {
+
 	for _, keyboard := range template.ReplyKeyboard {
 		for _, row := range keyboard {
-			for _, button := range row {
-				cmd := button.Command
-				text := button.Args
-				Args := []ArgInterface{}
-
-				splitted := []string{}
-				for _, a := range strings.Split(text, " ") {
-					trimmed := strings.TrimSpace(a)
-					if len(trimmed) > 0 {
-						splitted = append(splitted, trimmed)
-					}
-				}
-
-				for _, str := range splitted {
-					if val, ok := strconv.ParseFloat(str, 64); ok == nil {
-						Args = append(Args, Arg{val})
-					} else {
-						Args = append(Args, Arg{str})
-					}
-				}
-				ret[button.Text] = struct {
-					Cmd  string
-					Args []ArgInterface
-				}{cmd, Args}
-			}
+			handleRow(row, ret)
 		}
 	}
 }
