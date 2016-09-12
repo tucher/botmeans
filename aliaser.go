@@ -1,0 +1,86 @@
+package botmeans
+
+import (
+	"encoding/json"
+	"io"
+	"io/ioutil"
+	"os"
+	"strconv"
+	"strings"
+)
+
+func AliaserFromTemplates(sourceList []io.Reader) CommandAliaser {
+
+	ret := make(map[string]struct {
+		Cmd  string
+		Args []ArgInterface
+	})
+
+	for _, reader := range sourceList {
+		if c, err := ioutil.ReadAll(reader); err == nil {
+			c = []byte(strings.Replace(string(c), "\n", "", -1))
+
+			template := MessageTemplate{}
+
+			err := json.Unmarshal(c, &template)
+			if err != nil {
+				//ui.Logger.Println("Error in template ", file.Name())
+				continue
+			}
+			for _, keyboard := range template.ReplyKeyboard {
+				for _, row := range keyboard {
+					for _, button := range row {
+						cmd := button.Command
+						text := button.Args
+						Args := []ArgInterface{}
+
+						splitted := []string{}
+						for _, a := range strings.Split(text, " ") {
+							trimmed := strings.TrimSpace(a)
+							if len(trimmed) > 0 {
+								splitted = append(splitted, trimmed)
+							}
+						}
+
+						for _, str := range splitted {
+							if val, ok := strconv.ParseFloat(str, 64); ok == nil {
+								Args = append(Args, Arg{val})
+							} else {
+								Args = append(Args, Arg{str})
+							}
+						}
+						ret[button.Text] = struct {
+							Cmd  string
+							Args []ArgInterface
+						}{cmd, Args}
+					}
+				}
+			}
+		}
+
+	}
+	return func(text string) (cmd string, args []ArgInterface, ook bool) {
+		if r, ok := ret[text]; ok {
+			cmd = r.Cmd
+			args = r.Args
+			ook = true
+		}
+		return
+	}
+}
+
+func AliaserFromTemplateDir(path string) CommandAliaser {
+	files, _ := ioutil.ReadDir(path)
+
+	readers := []io.Reader{}
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+		if f, err := os.Open(path + file.Name()); err == nil {
+			readers = append(readers, f)
+		}
+
+	}
+	return AliaserFromTemplates(readers)
+}
