@@ -6,6 +6,7 @@ import (
 	"strings"
 )
 
+//ArgInterface defines the arg type, which is used to pass parsed args through the context
 type ArgInterface interface {
 	String() (string, bool)
 	Float() (float64, bool)
@@ -14,25 +15,30 @@ type ArgInterface interface {
 	LeftSession() bool
 }
 
+//ArgInterface implementation
 type Arg struct {
 	arg interface{}
 }
 
+//String treats the arg as string
 func (a Arg) String() (string, bool) {
 	val, ok := a.arg.(string)
 	return val, ok
 }
 
+//Float treats the arg as float
 func (a Arg) Float() (float64, bool) {
 	val, ok := a.arg.(float64)
 	return val, ok
 }
 
+//Mention treats the arg as SessionInterface
 func (a Arg) Mention() (SessionInterface, bool) {
 	val, ok := a.arg.(SessionInterface)
 	return val, ok
 }
 
+//NewSession treats the arg as flag if the session in arg is new
 func (a Arg) NewSession() bool {
 	val, ok := a.arg.(SessionInterface)
 	if ok && val.IsNew() {
@@ -41,6 +47,7 @@ func (a Arg) NewSession() bool {
 	return false
 }
 
+//LeftSession treats the arg as flag if the session in arg is left
 func (a Arg) LeftSession() bool {
 	val, ok := a.arg.(SessionInterface)
 	if ok && val.IsLeft() {
@@ -49,10 +56,11 @@ func (a Arg) LeftSession() bool {
 	return false
 }
 
+//CommandAliaser converts any text to cmd and args
 type CommandAliaser func(string) (string, []ArgInterface, bool)
 
+//ArgsParser parses arguments from Update
 func ArgsParser(tgUpdate tgbotapi.Update, sessionFactory SessionFactory, aliaser CommandAliaser) []ArgInterface {
-
 	text := ""
 	type mention struct {
 		t string
@@ -127,6 +135,7 @@ func ArgsParser(tgUpdate tgbotapi.Update, sessionFactory SessionFactory, aliaser
 	return retArgs
 }
 
+//ArgsParser parses command from Update
 func CmdParser(tgUpdate tgbotapi.Update, aliaser CommandAliaser) string {
 	text := ""
 

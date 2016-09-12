@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+//SessionBase passes core session identifiers
 type SessionBase struct {
 	TelegramUserID   int64  `sql:"index"`
 	TelegramUserName string `sql:"index"`
@@ -15,6 +16,7 @@ type SessionBase struct {
 	isLeft           bool
 }
 
+//Session represents the user in chat.
 type Session struct {
 	SessionBase
 	ID        int64  `sql:"index;unique"`
@@ -26,14 +28,17 @@ type Session struct {
 	CreatedAt time.Time
 }
 
+//IsNew should return new if the session has not been saved yet
 func (session *Session) IsNew() bool {
 	return session.isNew
 }
 
+//IsLeft returns true if the user has gone from chat
 func (session *Session) IsLeft() bool {
 	return session.isLeft
 }
 
+//ChatId returns chat id
 func (session *Session) ChatId() int64 {
 	return session.TelegramChatID
 }
@@ -57,6 +62,7 @@ func (session *Session) Save() error {
 	}
 }
 
+//Locale returns the locale for this user
 func (session *Session) Locale() string {
 	type Locale string
 
@@ -65,6 +71,7 @@ func (session *Session) Locale() string {
 	return string(lo)
 }
 
+//String represents the session as string
 func (session *Session) String() string {
 
 	return fmt.Sprintf("UserID: %v, UserName: %v, ChatID: %v, New: %v, Left: %v, Data: %v, Name: %v %v, Locale: %v",
@@ -80,9 +87,12 @@ func (session *Session) String() string {
 	)
 }
 
+//SessionInitDB creates sql table for Session
 func SessionInitDB(db *gorm.DB) {
 	db.AutoMigrate(&Session{})
 }
+
+//SessionLoader creates the session and loads the data if the session exists
 func SessionLoader(base SessionBase, db *gorm.DB, BotName string, BotID int64, api *tgbotapi.BotAPI) (SessionInterface, error) {
 	TelegramUserID := base.TelegramUserID
 	TelegramUserName := base.TelegramUserName

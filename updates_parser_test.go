@@ -76,7 +76,7 @@ func TestUpdatesParser(t *testing.T) {
 	)
 	type TestEntry struct {
 		tgUpdate tgbotapi.Update
-		result   []*Action2
+		result   []*Action
 	}
 	testData := []TestEntry{
 		TestEntry{
@@ -87,13 +87,13 @@ func TestUpdatesParser(t *testing.T) {
 					Text: "blabla",
 				},
 			},
-			[]*Action2{
-				&Action2{
+			[]*Action{
+				&Action{
 					session:    &Session{SessionBase: SessionBase{42, "fuuu", 24, true, false}},
 					cmdGetter:  func() string { return "" },
 					argsGetter: func() []ArgInterface { return []ArgInterface{Arg{}, Arg{"blabla"}} },
 				},
-				&Action2{
+				&Action{
 					session:    &Session{SessionBase: SessionBase{42, "fuuu", 24, true, false}},
 					cmdGetter:  func() string { return "" },
 					argsGetter: func() []ArgInterface { return []ArgInterface{Arg{"blabla"}} },
@@ -108,8 +108,8 @@ func TestUpdatesParser(t *testing.T) {
 					Text: "/cmd1",
 				},
 			},
-			[]*Action2{
-				&Action2{
+			[]*Action{
+				&Action{
 					session:    &Session{SessionBase: SessionBase{42, "fuuu", 24, false, false}},
 					cmdGetter:  func() string { return "cmd1" },
 					argsGetter: func() []ArgInterface { return []ArgInterface{Arg{"/cmd1"}} },
@@ -124,8 +124,8 @@ func TestUpdatesParser(t *testing.T) {
 					Text: "/cmd1 ffuuu 9.75",
 				},
 			},
-			[]*Action2{
-				&Action2{
+			[]*Action{
+				&Action{
 					session:    &Session{SessionBase: SessionBase{42, "fuuu", 24, false, false}},
 					cmdGetter:  func() string { return "cmd1" },
 					argsGetter: func() []ArgInterface { return []ArgInterface{Arg{"/cmd1"}, Arg{"ffuuu"}, Arg{9.75}} },
@@ -157,7 +157,7 @@ func TestUpdatesParser(t *testing.T) {
 				t.Log("Should be nil")
 				fail = true
 			case a != nil && testEntry.result[lastIndex] != nil:
-				if action, ok := a.(*Action2); ok {
+				if action, ok := a.(*Action); ok {
 					if *(action.session.(*Session)) != *testEntry.result[lastIndex].session.(*Session) {
 						fail = true
 						t.Log("Session content is wrong: ", *(action.session.(*Session)), *testEntry.result[lastIndex].session.(*Session))

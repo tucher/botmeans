@@ -5,6 +5,12 @@ import (
 	"sync"
 )
 
+//ChatIdentifier defines something that knows which chat it belongs to
+type ChatIdentifier interface {
+	ChatId() int64
+}
+
+//SessionInterface defines the user session
 type SessionInterface interface {
 	ChatIdentifier
 	PersistentSaver
@@ -14,7 +20,10 @@ type SessionInterface interface {
 	Locale() string
 }
 
+//SessionFactory creates the session from given session base
 type SessionFactory func(base SessionBase) (SessionInterface, error)
+
+//ActionExecuterFactory creates Executers from given session, cmd, args and source message
 type ActionExecuterFactory func(
 	SessionInterface,
 	func() string,
@@ -23,8 +32,13 @@ type ActionExecuterFactory func(
 	chan Executer,
 )
 
+//BotMessageFactory loads bot message from given chat id, msg id and callback id
 type BotMessageFactory func(int64, int64, string) BotMessageInterface
+
+//CmdParserFunc returns command for the given update
 type CmdParserFunc func(tgbotapi.Update) string
+
+//ArgsParserFunc returns args of command for the given update
 type ArgsParserFunc func(tgbotapi.Update) []ArgInterface
 
 func createTGUpdatesParser(

@@ -55,7 +55,7 @@ func TestActionExecute(t *testing.T) {
 		out,
 		handlersProvider,
 	)
-	action := (<-out).(*Action2)
+	action := (<-out).(*Action)
 	// t.Logf("%+v", action)
 	action.Args()
 	action.Id()

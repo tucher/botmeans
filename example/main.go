@@ -13,7 +13,7 @@ import (
 var DB *gorm.DB
 var DBErr error
 
-var bot *botmeans.MeansBot2
+var bot *botmeans.MeansBot
 
 func main() {
 	log.SetFlags(log.Llongfile)

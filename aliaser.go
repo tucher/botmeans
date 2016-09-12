@@ -9,6 +9,7 @@ import (
 	"strings"
 )
 
+//AliaserFromTemplates creates aliaser from given set of templates
 func AliaserFromTemplates(sourceList []io.Reader) CommandAliaser {
 
 	ret := make(map[string]struct {
@@ -69,6 +70,7 @@ func AliaserFromTemplates(sourceList []io.Reader) CommandAliaser {
 	}
 }
 
+//AliaserFromTemplateDir reads the given dir and calls AliaserFromTemplates
 func AliaserFromTemplateDir(path string) CommandAliaser {
 	files, _ := ioutil.ReadDir(path)
 
