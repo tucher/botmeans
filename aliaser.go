@@ -12,10 +12,7 @@ import (
 //AliaserFromTemplates creates aliaser from given set of templates
 func AliaserFromTemplates(sourceList []io.Reader) CommandAliaser {
 
-	ret := make(map[string]struct {
-		Cmd  string
-		Args []ArgInterface
-	})
+	ret := make(map[string]retStruct)
 
 	for _, reader := range sourceList {
 		if c, err := ioutil.ReadAll(reader); err == nil {
@@ -28,35 +25,8 @@ func AliaserFromTemplates(sourceList []io.Reader) CommandAliaser {
 				//ui.Logger.Println("Error in template ", file.Name())
 				continue
 			}
-			for _, keyboard := range template.ReplyKeyboard {
-				for _, row := range keyboard {
-					for _, button := range row {
-						cmd := button.Command
-						text := button.Args
-						Args := []ArgInterface{}
+			handleTemplate(template, ret)
 
-						splitted := []string{}
-						for _, a := range strings.Split(text, " ") {
-							trimmed := strings.TrimSpace(a)
-							if len(trimmed) > 0 {
-								splitted = append(splitted, trimmed)
-							}
-						}
-
-						for _, str := range splitted {
-							if val, ok := strconv.ParseFloat(str, 64); ok == nil {
-								Args = append(Args, Arg{val})
-							} else {
-								Args = append(Args, Arg{str})
-							}
-						}
-						ret[button.Text] = struct {
-							Cmd  string
-							Args []ArgInterface
-						}{cmd, Args}
-					}
-				}
-			}
 		}
 
 	}
@@ -85,4 +55,41 @@ func AliaserFromTemplateDir(path string) CommandAliaser {
 
 	}
 	return AliaserFromTemplates(readers)
+}
+
+type retStruct struct {
+	Cmd  string
+	Args []ArgInterface
+}
+
+func handleTemplate(template MessageTemplate, ret map[string]retStruct) {
+	for _, keyboard := range template.ReplyKeyboard {
+		for _, row := range keyboard {
+			for _, button := range row {
+				cmd := button.Command
+				text := button.Args
+				Args := []ArgInterface{}
+
+				splitted := []string{}
+				for _, a := range strings.Split(text, " ") {
+					trimmed := strings.TrimSpace(a)
+					if len(trimmed) > 0 {
+						splitted = append(splitted, trimmed)
+					}
+				}
+
+				for _, str := range splitted {
+					if val, ok := strconv.ParseFloat(str, 64); ok == nil {
+						Args = append(Args, Arg{val})
+					} else {
+						Args = append(Args, Arg{str})
+					}
+				}
+				ret[button.Text] = struct {
+					Cmd  string
+					Args []ArgInterface
+				}{cmd, Args}
+			}
+		}
+	}
 }
