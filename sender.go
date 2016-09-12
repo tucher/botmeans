@@ -3,7 +3,7 @@ package botmeans
 import (
 	"github.com/go-telegram-bot-api/telegram-bot-api"
 	// "log"
-	"text/template"
+	// "text/template"
 )
 
 //OutMsgFactoryInterface allows users to create or edit messages inside ActionHandlers
@@ -17,7 +17,7 @@ type OutMsgFactoryInterface interface {
 //SenderInterface is the abstraction for the Sender
 type SenderInterface interface {
 	OutMsgFactoryInterface
-	Sendable
+	// Sendable
 }
 
 //Sendable defines something that can be Send
@@ -25,34 +25,34 @@ type Sendable interface {
 	Send() bool
 }
 
-type notification struct {
-	id        string
-	showAlert bool
-	text      string
-}
+// type notification struct {
+// 	id        string
+// 	showAlert bool
+// 	text      string
+// }
 
 //Sender implements SenderInterface
 type Sender struct {
-	msgFactory     func() BotMessageInterface
-	session        SessionInterface
-	outputMessages []msgMeta
-	notifications  []notification
-	bot            *tgbotapi.BotAPI
-	templ          *template.Template
-	templateDir    string
+	msgFactory func() BotMessageInterface
+	session    SessionInterface
+	// outputMessages []msgMeta
+	// notifications  []notification
+	bot *tgbotapi.BotAPI
+	// templ       *template.Template
+	templateDir string
 }
 
-type msgMeta struct {
-	message BotMessageInterface
-	edit    bool
-}
+// type msgMeta struct {
+// 	message BotMessageInterface
+// 	edit    bool
+// }
 
 //Create creates new telegram message from template
 func (f *Sender) Create(templateName string, Data interface{}) {
 	botMsg := f.msgFactory()
 	botMsg.SetData(Data)
 
-	ParseMode, text, inlineKbdMarkup, replyKbdMarkup := renderFromTemplate(f.templateDir, templateName, f.session.Locale(), Data, f.templ)
+	ParseMode, text, inlineKbdMarkup, replyKbdMarkup := renderFromTemplate(f.templateDir, templateName, f.session.Locale(), Data)
 
 	toSent := tgbotapi.NewMessage(f.session.ChatId(), text)
 	toSent.ParseMode = ParseMode
@@ -69,7 +69,9 @@ func (f *Sender) Create(templateName string, Data interface{}) {
 		}
 	}
 
-	f.outputMessages = append(f.outputMessages, msgMeta{botMsg, false})
+	// f.outputMessages = append(f.outputMessages, msgMeta{botMsg, false})
+	botMsg.Save()
+
 }
 
 //SimpleText creates new telegram message with given text
@@ -82,18 +84,25 @@ func (f *Sender) SimpleText(text string) {
 		}
 	}
 
-	f.outputMessages = append(f.outputMessages, msgMeta{botMsg, false})
+	// f.outputMessages = append(f.outputMessages, msgMeta{botMsg, false})
+	botMsg.Save()
 }
 
 //Notify creates notification for callback queries
 func (f *Sender) Notify(msg BotMessageInterface, callbackNotification string, showAlert bool) {
-	f.notifications = append(f.notifications, notification{msg.CallbackID(), showAlert, callbackNotification})
+	// f.notifications = append(f.notifications, notification{msg.CallbackID(), showAlert, callbackNotification})
+
+	f.bot.AnswerCallbackQuery(tgbotapi.CallbackConfig{
+		CallbackQueryID: msg.CallbackID(),
+		ShowAlert:       showAlert,
+		Text:            callbackNotification,
+	})
 }
 
 //Edit allows to edit existing messages
 func (f *Sender) Edit(msg BotMessageInterface, templateName string, Data interface{}) {
 	msg.SetData(Data)
-	ParseMode, text, inlineKbdMarkup, _ := renderFromTemplate(f.templateDir, templateName, f.session.Locale(), Data, f.templ)
+	ParseMode, text, inlineKbdMarkup, _ := renderFromTemplate(f.templateDir, templateName, f.session.Locale(), Data)
 
 	editConfig := tgbotapi.NewEditMessageText(f.session.ChatId(), int(msg.Id()), text)
 
@@ -105,22 +114,22 @@ func (f *Sender) Edit(msg BotMessageInterface, templateName string, Data interfa
 	if f.bot != nil {
 		f.bot.Send(editConfig)
 	}
-
-	f.outputMessages = append(f.outputMessages, msgMeta{msg, true})
+	msg.Save()
+	// f.outputMessages = append(f.outputMessages, msgMeta{msg, true})
 }
 
-//Send saves all sent messages and answers callbacks
-func (f *Sender) Send() bool {
-	for _, msgMeta := range f.outputMessages {
-		msgMeta.message.Save()
-	}
+// //Send saves all sent messages and answers callbacks
+// func (f *Sender) Send() bool {
+// 	for _, msgMeta := range f.outputMessages {
+// 		msgMeta.message.Save()
+// 	}
 
-	for _, n := range f.notifications {
-		f.bot.AnswerCallbackQuery(tgbotapi.CallbackConfig{
-			CallbackQueryID: n.id,
-			ShowAlert:       n.showAlert,
-			Text:            n.text,
-		})
-	}
-	return true
-}
+// 	for _, n := range f.notifications {
+// 		f.bot.AnswerCallbackQuery(tgbotapi.CallbackConfig{
+// 			CallbackQueryID: n.id,
+// 			ShowAlert:       n.showAlert,
+// 			Text:            n.text,
+// 		})
+// 	}
+// 	return true
+// }

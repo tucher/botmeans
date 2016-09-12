@@ -84,7 +84,7 @@ func (a *Action) Execute() {
 	a.session.SetData(*a)
 	a.session.Save()
 
-	a.sender.Send()
+	// a.sender.Send()
 }
 
 //Id returns id based on chat id

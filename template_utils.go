@@ -36,8 +36,8 @@ func renderFromTemplate(
 	templateName string,
 	locale string,
 	Data interface{},
-	templ *template.Template,
 ) (string, string, *tgbotapi.InlineKeyboardMarkup, *tgbotapi.ReplyKeyboardMarkup) {
+	templ := getTemplater()
 	msgTemplate, err := readMsgTemplate(templateDir + "/" + templateName + ".json")
 	if err != nil {
 		return "", "", nil, nil

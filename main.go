@@ -94,9 +94,9 @@ func (ui *MeansBot) Run(handlersProvider ActionHandlersProvider, templateDir str
 			argsGetter,
 			sourceMessageGetter,
 			&Sender{
-				session:     session,
-				bot:         ui.bot,
-				templ:       getTemplater(),
+				session: session,
+				bot:     ui.bot,
+				// templ:       getTemplater(),
 				templateDir: templateDir,
 				msgFactory:  func() BotMessageInterface { return NewBotMessage(session.ChatId(), ui.db) },
 			},
