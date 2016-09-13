@@ -16,7 +16,8 @@ type SessionInterface interface {
 	PersistentSaver
 	DataGetSetter
 	IsNew() bool
-	IsLeft() bool
+	HasLeft() bool
+	HasCome() bool
 	Locale() string
 }
 

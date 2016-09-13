@@ -11,8 +11,9 @@ type ArgInterface interface {
 	String() (string, bool)
 	Float() (float64, bool)
 	Mention() (SessionInterface, bool)
-	NewSession() bool
-	LeftSession() bool
+	NewSession() (SessionInterface, bool)
+	LeftSession() (SessionInterface, bool)
+	ComeSession() (SessionInterface, bool)
 }
 
 //Arg is a ArgInterface implementation
@@ -34,26 +35,35 @@ func (a Arg) Float() (float64, bool) {
 
 //Mention treats the arg as SessionInterface
 func (a Arg) Mention() (SessionInterface, bool) {
-	val, ok := a.arg.(SessionInterface)
-	return val, ok
+	val, ok := a.arg.(mention)
+	return val.s, ok
 }
 
 //NewSession treats the arg as flag if the session in arg is new
-func (a Arg) NewSession() bool {
+func (a Arg) NewSession() (SessionInterface, bool) {
 	val, ok := a.arg.(SessionInterface)
 	if ok && val.IsNew() {
-		return true
+		return val, true
 	}
-	return false
+	return nil, false
 }
 
 //LeftSession treats the arg as flag if the session in arg is left
-func (a Arg) LeftSession() bool {
+func (a Arg) LeftSession() (SessionInterface, bool) {
 	val, ok := a.arg.(SessionInterface)
-	if ok && val.IsLeft() {
-		return true
+	if ok && val.HasLeft() {
+		return val, true
 	}
-	return false
+	return nil, false
+}
+
+//LeftSession treats the arg as flag if the session in arg is left
+func (a Arg) ComeSession() (SessionInterface, bool) {
+	val, ok := a.arg.(SessionInterface)
+	if ok && val.HasCome() {
+		return val, true
+	}
+	return nil, false
 }
 
 //CommandAliaser converts any text to cmd and args
@@ -70,14 +80,14 @@ func extractMentions(tgUpdate tgbotapi.Update, sessionFactory SessionFactory) (m
 			switch {
 			case ent.Type == "text_mention" && ent.User != nil:
 
-				if s, err := sessionFactory(SessionBase{int64(ent.User.ID), ent.User.UserName, tgUpdate.Message.Chat.ID, false, false}); err != nil {
+				if s, err := sessionFactory(SessionBase{int64(ent.User.ID), ent.User.UserName, tgUpdate.Message.Chat.ID, false, false}); err == nil {
 
 					mentions = append(mentions, mention{string([]rune(tgUpdate.Message.Text)[ent.Offset : ent.Offset+ent.Length]), s})
 				}
 
 			case ent.Type == "mention":
 				userName := string([]rune(tgUpdate.Message.Text)[ent.Offset+1 : ent.Offset+ent.Length])
-				if s, err := sessionFactory(SessionBase{0, userName, tgUpdate.Message.Chat.ID, false, false}); err != nil {
+				if s, err := sessionFactory(SessionBase{0, userName, tgUpdate.Message.Chat.ID, false, false}); err == nil {
 					mentions = append(mentions, mention{string([]rune(tgUpdate.Message.Text)[ent.Offset : ent.Offset+ent.Length]), s})
 				}
 			}
@@ -97,12 +107,14 @@ func ArgsParser(tgUpdate tgbotapi.Update, sessionFactory SessionFactory, aliaser
 		text = tgUpdate.Message.Text
 
 		if tgUpdate.Message.NewChatMember != nil {
-			s, _ := sessionFactory(SessionBase{int64(tgUpdate.Message.NewChatMember.ID), tgUpdate.Message.NewChatMember.UserName, tgUpdate.Message.Chat.ID, true, false})
-			return []ArgInterface{Arg{s}}
+			if s, err := sessionFactory(SessionBase{int64(tgUpdate.Message.NewChatMember.ID), tgUpdate.Message.NewChatMember.UserName, tgUpdate.Message.Chat.ID, true, false}); err == nil {
+				return []ArgInterface{Arg{s}}
+			}
 		}
 		if tgUpdate.Message.LeftChatMember != nil {
-			s, _ := sessionFactory(SessionBase{int64(tgUpdate.Message.LeftChatMember.ID), tgUpdate.Message.LeftChatMember.UserName, tgUpdate.Message.Chat.ID, false, true})
-			return []ArgInterface{Arg{s}}
+			if s, err := sessionFactory(SessionBase{int64(tgUpdate.Message.LeftChatMember.ID), tgUpdate.Message.LeftChatMember.UserName, tgUpdate.Message.Chat.ID, false, true}); err == nil {
+				return []ArgInterface{Arg{s}}
+			}
 		}
 		mentions = extractMentions(tgUpdate, sessionFactory)
 	case tgUpdate.CallbackQuery != nil:
@@ -131,7 +143,7 @@ func ArgsParser(tgUpdate tgbotapi.Update, sessionFactory SessionFactory, aliaser
 			}
 		}
 		if mfound != -1 {
-			retArgs = append(retArgs, Arg{mentions[mfound].s})
+			retArgs = append(retArgs, Arg{mentions[mfound]})
 		} else if val, ok := strconv.ParseFloat(str, 64); ok == nil {
 			retArgs = append(retArgs, Arg{val})
 		} else {

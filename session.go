@@ -12,8 +12,8 @@ type SessionBase struct {
 	TelegramUserID   int64  `sql:"index"`
 	TelegramUserName string `sql:"index"`
 	TelegramChatID   int64  `sql:"index"`
-	isNew            bool
-	isLeft           bool
+	hasCome          bool
+	hasLeft          bool
 }
 
 //Session represents the user in chat.
@@ -26,6 +26,7 @@ type Session struct {
 	LastName  string
 	ChatName  string
 	CreatedAt time.Time
+	isNew     bool
 }
 
 //IsNew should return new if the session has not been saved yet
@@ -33,9 +34,14 @@ func (session *Session) IsNew() bool {
 	return session.isNew
 }
 
-//IsLeft returns true if the user has gone from chat
-func (session *Session) IsLeft() bool {
-	return session.isLeft
+//HasLeft returns true if the user has gone from chat
+func (session *Session) HasLeft() bool {
+	return session.hasLeft
+}
+
+//HasCome returns true if the user has come to chat
+func (session *Session) HasCome() bool {
+	return session.hasCome
 }
 
 //ChatId returns chat id
@@ -56,7 +62,12 @@ func (session *Session) GetData(value interface{}) {
 //Save saves the session to sql table
 func (session *Session) Save() error {
 	if session.db != nil {
-		return session.db.Save(session).Error
+		if err := session.db.Save(session).Error; err == nil {
+			session.isNew = false
+			return nil
+		} else {
+			return err
+		}
 	}
 	return fmt.Errorf("db not set")
 }
@@ -73,12 +84,13 @@ func (session *Session) Locale() string {
 //String represents the session as string
 func (session *Session) String() string {
 
-	return fmt.Sprintf("UserID: %v, UserName: %v, ChatID: %v, New: %v, Left: %v, Data: %v, Name: %v %v, Locale: %v",
+	return fmt.Sprintf("UserID: %v, UserName: %v, ChatID: %v, New: %v, Come: %v, Left: %v, Data: %v, Name: %v %v, Locale: %v",
 		session.TelegramUserID,
 		session.TelegramUserName,
 		session.TelegramChatID,
 		session.isNew,
-		session.isLeft,
+		session.hasCome,
+		session.hasLeft,
 		session.UserData,
 		session.FirstName,
 		session.LastName,
@@ -129,6 +141,9 @@ func SessionLoader(base SessionBase, db *gorm.DB, BotID int64, api *tgbotapi.Bot
 		err = nil
 
 	}
+	err = nil
+	session.hasLeft = base.hasLeft
+	session.hasCome = base.hasCome
 
 	return session, err
 }

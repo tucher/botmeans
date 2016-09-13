@@ -44,7 +44,7 @@ func handlersProvider(id string) (ret botmeans.ActionHandler, ok bool) {
 }
 
 func main() {
-	log.SetFlags(log.Llongfile)
+	log.SetFlags(log.Lshortfile)
 	DB, DBErr = gorm.Open("postgres", fmt.Sprintf("user=%v dbname=%v sslmode=disable password=%v",
 		string(os.Getenv("MEANS_DB_USERNAME")),
 		string(os.Getenv("MEANS_DBNAME")),
@@ -72,7 +72,29 @@ func main() {
 		select {
 		case c := <-contextChan:
 			log.Printf("Session: (%+v)", c.Session())
-			log.Printf("Args: (%+v)", c.Args())
+			log.Printf("Args:")
+			for i, arg := range c.Args() {
+				if s, ok := arg.Mention(); ok {
+					log.Println("   ", i, ": Mention ", s)
+					// log.Println(s.Save())
+				}
+
+				if s, ok := arg.NewSession(); ok {
+					log.Println("   ", i, ": NewSession: ", s)
+				}
+				if s, ok := arg.LeftSession(); ok {
+					log.Println("   ", i, ": LeftSession: ", s)
+				}
+				if s, ok := arg.ComeSession(); ok {
+					log.Println("   ", i, ": ComeSession: ", s)
+
+				}
+
+				log.Println("   ", i, ": Arg ", arg)
+
+			}
+
+			log.Printf("\n")
 			// case <-enoughChan:
 
 			// 	return

@@ -83,5 +83,6 @@ func NewBotMessage(TelegramChatID int64, db *gorm.DB) BotMessageInterface {
 	ret.db = db
 	ret.TelegramChatID = TelegramChatID
 	ret.UserData = "{}"
+	ret.Timestamp = time.Now()
 	return ret
 }

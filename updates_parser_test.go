@@ -42,8 +42,7 @@ func TestUpdatesParser(t *testing.T) {
 		_, ok := sessionIdFlags[stringID]
 		sessionIdFlags[stringID] = struct{}{}
 		mutex.Unlock()
-		base.isNew = !ok
-		return &Session{SessionBase: base, db: nil}, nil
+		return &Session{SessionBase: base, db: nil, isNew: !ok}, nil
 	}
 
 	aliaser := func(string) (string, []ArgInterface, bool) { return "", []ArgInterface{}, false }
@@ -87,14 +86,14 @@ func TestUpdatesParser(t *testing.T) {
 			},
 			[]*Action{
 				&Action{
-					session: &Session{SessionBase: SessionBase{42, "fuuu", 24, true, false}},
+					session: &Session{SessionBase: SessionBase{42, "fuuu", 24, false, false}, isNew: true},
 					getters: actionExecuterFactoryConfig{
 						cmdGetter:  func() string { return "" },
-						argsGetter: func() []ArgInterface { return []ArgInterface{Arg{}, Arg{"blabla"}} },
+						argsGetter: func() []ArgInterface { return []ArgInterface{Arg{}} },
 					},
 				},
 				&Action{
-					session: &Session{SessionBase: SessionBase{42, "fuuu", 24, true, false}},
+					session: &Session{SessionBase: SessionBase{42, "fuuu", 24, false, false}, isNew: true},
 					getters: actionExecuterFactoryConfig{
 						cmdGetter:  func() string { return "" },
 						argsGetter: func() []ArgInterface { return []ArgInterface{Arg{"blabla"}} },
@@ -177,7 +176,8 @@ func TestUpdatesParser(t *testing.T) {
 						t.Log("Wrong args len", action.getters.argsGetter(), testEntry.result[lastIndex].getters.argsGetter())
 					} else {
 						for i := range action.getters.argsGetter() {
-							if action.getters.argsGetter()[i] != testEntry.result[lastIndex].getters.argsGetter()[i] && action.getters.argsGetter()[i].NewSession() != true {
+							_, ok := action.getters.argsGetter()[i].NewSession()
+							if action.getters.argsGetter()[i] != testEntry.result[lastIndex].getters.argsGetter()[i] && ok != true {
 								fail = true
 								t.Log("Wrong arg: ", action.getters.argsGetter()[i], testEntry.result[lastIndex].getters.argsGetter()[i])
 								break

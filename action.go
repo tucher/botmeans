@@ -21,25 +21,25 @@ func ActionFactory(
 			handlersProvider: handlersProvider,
 			getters: actionExecuterFactoryConfig{
 				cmdGetter:       func() string { return "" },
-				argsGetter:      func() []ArgInterface { return append([]ArgInterface{Arg{session}}, getters.argsGetter()...) },
+				argsGetter:      func() []ArgInterface { return []ArgInterface{Arg{session}} },
 				sourceMsgGetter: func() (r BotMessageInterface) { return },
 			},
 			sender: sender,
 		}
 	}
-	if _, ok := handlersProvider(getters.cmdGetter()); ok == true {
+	//if _, ok := handlersProvider(getters.cmdGetter()); ok == true {
 
-		ret := &Action{
-			session:          session,
-			handlersProvider: handlersProvider,
-			getters:          getters,
-			sender:           sender,
-		}
-		session.GetData(ret)
-		out <- ret
-	} else {
-		out <- nil
+	ret := &Action{
+		session:          session,
+		handlersProvider: handlersProvider,
+		getters:          getters,
+		sender:           sender,
 	}
+	session.GetData(ret)
+	out <- ret
+	// } else {
+	// 	out <- nil
+	// }
 
 }
 
@@ -68,6 +68,7 @@ func (a *Action) Execute() {
 	}()
 	ok := false
 	cmd := a.getters.cmdGetter()
+
 	if _, ok = a.handlersProvider(cmd); ok == true && cmd != "" {
 		a.LastCommand = cmd
 	} else if _, ok = a.handlersProvider(a.LastCommand); ok == true {

@@ -38,7 +38,7 @@ func TestSession(t *testing.T) {
 	if loaded.IsNew() != false {
 		t.Error("Should be false")
 	}
-	if loaded.IsLeft() == true {
+	if loaded.HasLeft() == true {
 		t.Error("should be false")
 	}
 	if loaded.ChatId() != 123 {
