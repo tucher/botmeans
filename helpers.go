@@ -1,27 +1,64 @@
 package botmeans
 
-// import (
-// 	"encoding/json"
-// 	"fmt"
-// 	"github.com/go-telegram-bot-api/telegram-bot-api"
-// 	"io/ioutil"
-// 	"reflect"
-// 	"strings"
-// 	"text/template"
-// )
+import (
+	// 	"encoding/json"
+	// 	"fmt"
+	// 	"github.com/go-telegram-bot-api/telegram-bot-api"
+	// 	"io/ioutil"
+	"reflect"
+	// 	"strings"
+	// 	"text/template"
+	// "log"
+)
 
-// //GetNeighborSessions returns all sessions that are in the same chat as given session
-// func (ui *MeansBot) GetNeighborSessions(session *TelegramUserSession) (ret []TelegramUserSession) {
-// 	ui.db.Where("telegram_chat_id=?", session.TelegramChatID).Find(&ret)
-// 	return
-// }
+type Identifiable interface {
+	Id() int64
+}
 
-// //SetChatLocale sets the locale of all sessions in this chat
-// func (ui *MeansBot) SetChatLocale(session *TelegramUserSession, locale string) {
-// 	session.Locale = locale
-// 	ui.db.Table("telegram_user_sessions").Where("telegram_chat_id=?", session.TelegramChatID).
-// 		Updates(map[string]interface{}{"locale": locale})
-// }
+type UserIdentifier interface {
+	UserId() int64
+}
+
+func (ui *MeansBot) Find(val ...Identifiable) (err error) {
+	for _, v := range val {
+		if err = ui.db.Where("id=?", v.Id()).First(v).Error; err != nil {
+			return
+		}
+	}
+	return
+}
+
+func (ui *MeansBot) FindSession(id int64) SessionInterface {
+	r := Session{}
+	if err := ui.db.Where("id=?", id).First(&r).Error; err != nil {
+		return &r
+	}
+	return nil
+}
+
+//GetNeighborSessions returns all sessions that are in the same chat as given session
+func (ui *MeansBot) GetChatSessions(session SessionInterface) (ret []SessionInterface) {
+
+	sessions := []*Session{}
+	ui.db.Where("telegram_chat_id=?", session.ChatId()).Find(&sessions)
+	for _, s := range sessions {
+		ret = append(ret, s)
+	}
+	return
+}
+
+//SetChatLocale sets the locale of all sessions in this chat
+func (ui *MeansBot) SetChatLocale(session SessionInterface, locale string) {
+	session.SetLocale(locale)
+	sL := []Session{}
+	ui.db.Where("telegram_chat_id=?", session.ChatId()).Find(&sL)
+	for _, s := range sL {
+		s.SetLocale(locale)
+		s.db = ui.db
+		s.Save()
+	}
+
+}
 
 // //GetSessionsByUserData returns all sessions in this chat that have given value in UserData field
 // func (ui *MeansBot) GetSessionsByUserData(filters map[string]interface{}) (ret []TelegramUserSession) {
@@ -33,11 +70,15 @@ package botmeans
 // 	return
 // }
 
-// //GetSessionsByTelegramUserID returns all sessions with given Telegram User ID
-// func (ui *MeansBot) GetSessionsByTelegramUser(session *TelegramUserSession) (ret []TelegramUserSession) {
-// 	ui.db.Where("telegram_user_id=? or (telegram_user_name=? and telegram_user_name != '')", session.TelegramUserID, session.TelegramUserName).Find(&ret)
-// 	return
-// }
+//GetSessionsByTelegramUserID returns all sessions with given Telegram User ID
+func (ui *MeansBot) GetUserSessions(session SessionInterface) (ret []SessionInterface) {
+	s := []*Session{}
+	ui.db.Where("telegram_user_id=?", session.UserId()).Find(&s)
+	for _, ses := range s {
+		ret = append(ret, ses)
+	}
+	return
+}
 
 // //GetBotMessagesByChatAndMsgID returns Bot message from session's chat with given MsgID
 // func (ui *MeansBot) GetBotMessagesByChatAndMsgID(session *TelegramUserSession, msgID int64) (ret TelegramBotMessage) {
@@ -45,13 +86,17 @@ package botmeans
 // 	return
 // }
 
-// //GetBotMessagesByChatAndType returns Bot messages from session's chat with given UserData type
-// func (ui *MeansBot) GetBotMessagesByChatAndType(session *TelegramUserSession, typeSample interface{}) (ret []TelegramBotMessage) {
-// 	t := reflect.TypeOf(typeSample).Name()
-// 	ui.db.Where("telegram_chat_id=?", session.TelegramChatID).
-// 		Where("(user_data->>'Type')::text = ?::text", t).Find(&ret)
-// 	return
-// }
+//GetBotMessagesByChatAndType returns Bot messages from session's chat with given UserData type
+func (ui *MeansBot) GetBotMessagesByChatAndType(session SessionInterface, typeSample interface{}) (ret []BotMessageInterface) {
+	t := reflect.TypeOf(typeSample).Name()
+	msgs := []*BotMessage{}
+	ui.db.Where("telegram_chat_id=?", session.ChatId()).
+		Where("jsonb_exists(user_data, ?::text)", t).Find(&msgs)
+	for _, m := range msgs {
+		ret = append(ret, m)
+	}
+	return
+}
 
 // //FindBotMessagesByChatAndUserData returns Bot messages from session's chat with given UserData type and given values in UserData
 // func (ui *MeansBot) FindBotMessagesByChatAndUserData(session TelegramUserSession, typeSample interface{}, filters map[string]interface{}) (ret []TelegramBotMessage) {

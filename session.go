@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/jinzhu/gorm"
+	"strings"
 	"time"
 )
 
@@ -29,7 +30,7 @@ type Session struct {
 	isNew     bool
 }
 
-//IsNew should return new if the session has not been saved yet
+//IsNew should return true if the session has not been saved yet
 func (session *Session) IsNew() bool {
 	return session.isNew
 }
@@ -44,9 +45,18 @@ func (session *Session) HasCome() bool {
 	return session.hasCome
 }
 
+//IsOneToOne should return true if the session represents one-to-one chat with bot
+func (session *Session) IsOneToOne() bool {
+	return session.TelegramChatID == session.TelegramUserID
+}
+
 //ChatId returns chat id
 func (session *Session) ChatId() int64 {
 	return session.TelegramChatID
+}
+
+func (session *Session) UserId() int64 {
+	return session.TelegramUserID
 }
 
 //SetData sets internal UserData field to JSON representation of given value
@@ -57,6 +67,24 @@ func (session *Session) SetData(value interface{}) {
 //GetData extracts internal UserData field to given value
 func (session *Session) GetData(value interface{}) {
 	deserialize(session.UserData, value)
+}
+
+//UserName returns name of the user of this session
+func (session *Session) UserName() string {
+	s := strings.TrimSpace(session.FirstName + " " + session.LastName)
+	if s == "" {
+		s = session.TelegramUserName
+	}
+	return s
+}
+
+//ChatName returns name of the chat of this session
+func (session *Session) ChatTitle() string {
+	return session.ChatName
+}
+
+func (session *Session) Id() int64 {
+	return session.ID
 }
 
 //Save saves the session to sql table
@@ -79,6 +107,12 @@ func (session *Session) Locale() string {
 	var lo Locale
 	session.GetData(&lo)
 	return string(lo)
+}
+
+func (session *Session) SetLocale(locale string) {
+	type Locale string
+	var lo Locale = Locale(locale)
+	session.SetData(lo)
 }
 
 //String represents the session as string
@@ -144,6 +178,8 @@ func SessionLoader(base SessionBase, db *gorm.DB, BotID int64, api *tgbotapi.Bot
 	err = nil
 	session.hasLeft = base.hasLeft
 	session.hasCome = base.hasCome
+	session.TelegramUserID = base.TelegramUserID
+	session.TelegramUserName = base.TelegramUserName
 
 	return session, err
 }

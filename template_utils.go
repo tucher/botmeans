@@ -6,13 +6,27 @@ import (
 	"fmt"
 	"github.com/go-telegram-bot-api/telegram-bot-api"
 	"io/ioutil"
+	// "log"
 	"strings"
 	"text/template"
+	"unicode"
 )
 
 func getTemplater() *template.Template {
 	return template.New("msg").Funcs(
-		template.FuncMap{"underscore": func(s string) string { return strings.Replace(strings.TrimSpace(s), " ", "_", -1) }},
+		template.FuncMap{
+			"underscore": func(s string) string {
+				return strings.Map(
+					func(r rune) rune {
+						if unicode.IsLetter(r) || unicode.IsNumber(r) {
+							return r
+						}
+						return '_'
+					},
+					strings.TrimSpace(s),
+				)
+			},
+		},
 	)
 }
 
@@ -112,6 +126,7 @@ func createReplyKeyboard(buttons [][]MessageButton) *tgbotapi.ReplyKeyboardMarku
 }
 
 func renderText(templateText string, data interface{}, templ *template.Template) (text string, err error) {
+	// log.Printf("\n%+v", data)
 	if t, e := templ.Parse(templateText); err != nil {
 		err = e
 	} else {

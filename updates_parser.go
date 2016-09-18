@@ -13,12 +13,18 @@ type ChatIdentifier interface {
 //SessionInterface defines the user session
 type SessionInterface interface {
 	ChatIdentifier
+	UserIdentifier
 	PersistentSaver
 	DataGetSetter
 	IsNew() bool
 	HasLeft() bool
 	HasCome() bool
 	Locale() string
+	UserName() string
+	Identifiable
+	SetLocale(string)
+	ChatTitle() string
+	IsOneToOne() bool
 }
 
 //SessionFactory creates the session from given session base
@@ -72,8 +78,8 @@ func createTGUpdatesParser(
 					msg = tgUpdate.Message
 				case tgUpdate.CallbackQuery != nil:
 					chatId = tgUpdate.CallbackQuery.Message.Chat.ID
-					userId = int64(tgUpdate.CallbackQuery.Message.From.ID)
-					username = tgUpdate.CallbackQuery.Message.From.UserName
+					userId = int64(tgUpdate.CallbackQuery.From.ID)
+					username = tgUpdate.CallbackQuery.From.UserName
 					msg = tgUpdate.CallbackQuery.Message
 					msgId = int64(msg.MessageID)
 					callbackID = tgUpdate.CallbackQuery.ID
@@ -87,16 +93,17 @@ func createTGUpdatesParser(
 
 				}
 
-				session, _ := pC.sessionFactory(SessionBase{TelegramUserID: userId, TelegramUserName: username, TelegramChatID: chatId})
-
-				pC.actionExecuterFactory(
-					session,
-					actionExecuterFactoryConfig{
-						func() string { return pC.cmdParser(tgUpdate) },
-						func() []ArgInterface { return pC.argsParser(tgUpdate) },
-						func() BotMessageInterface { return pC.botMessageFactory(chatId, msgId, callbackID) },
-					},
-					cmdQueueChan)
+				session, err := pC.sessionFactory(SessionBase{TelegramUserID: userId, TelegramUserName: username, TelegramChatID: chatId})
+				if err == nil {
+					pC.actionExecuterFactory(
+						session,
+						actionExecuterFactoryConfig{
+							func() string { return pC.cmdParser(tgUpdate) },
+							func() []ArgInterface { return pC.argsParser(tgUpdate) },
+							func() BotMessageInterface { return pC.botMessageFactory(chatId, msgId, callbackID) },
+						},
+						cmdQueueChan)
+				}
 				wg.Done()
 			}()
 		}

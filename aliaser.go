@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
+	// "log"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 )
@@ -16,20 +18,21 @@ func AliaserFromTemplates(sourceList []io.Reader) CommandAliaser {
 
 	for _, reader := range sourceList {
 		if c, err := ioutil.ReadAll(reader); err == nil {
+
 			c = []byte(strings.Replace(string(c), "\n", "", -1))
 
 			template := MessageTemplate{}
 
 			err := json.Unmarshal(c, &template)
 			if err != nil {
-				//ui.Logger.Println("Error in template ", file.Name())
 				continue
 			}
-			handleTemplate(template, ret)
+			handleTemplate(template, &ret)
 
 		}
 
 	}
+
 	return func(text string) (cmd string, args []ArgInterface, ook bool) {
 		if r, ok := ret[text]; ok {
 			cmd = r.Cmd
@@ -41,15 +44,16 @@ func AliaserFromTemplates(sourceList []io.Reader) CommandAliaser {
 }
 
 //AliaserFromTemplateDir reads the given dir and calls AliaserFromTemplates
-func AliaserFromTemplateDir(path string) CommandAliaser {
-	files, _ := ioutil.ReadDir(path)
+func AliaserFromTemplateDir(p string) CommandAliaser {
+	files, _ := ioutil.ReadDir(p)
 
 	readers := []io.Reader{}
 	for _, file := range files {
 		if file.IsDir() {
 			continue
 		}
-		if f, err := os.Open(path + file.Name()); err == nil {
+
+		if f, err := os.Open(path.Join(p, file.Name())); err == nil {
 			readers = append(readers, f)
 		}
 
@@ -62,7 +66,7 @@ type retStruct struct {
 	Args []ArgInterface
 }
 
-func handleRow(row []MessageButton, ret map[string]retStruct) {
+func handleRow(row []MessageButton, ret *map[string]retStruct) {
 	for _, button := range row {
 		cmd := button.Command
 		text := button.Args
@@ -83,14 +87,14 @@ func handleRow(row []MessageButton, ret map[string]retStruct) {
 				Args = append(Args, Arg{str})
 			}
 		}
-		ret[button.Text] = struct {
+		(*ret)[button.Text] = struct {
 			Cmd  string
 			Args []ArgInterface
 		}{cmd, Args}
 	}
 }
 
-func handleTemplate(template MessageTemplate, ret map[string]retStruct) {
+func handleTemplate(template MessageTemplate, ret *map[string]retStruct) {
 
 	for _, keyboard := range template.ReplyKeyboard {
 		for _, row := range keyboard {
