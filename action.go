@@ -6,9 +6,45 @@ type ActionHandler func(context ActionContextInterface)
 //ActionHandlersProvider returns ActionHandler for given command
 type ActionHandlersProvider func(id string) (ActionHandler, bool)
 
+//SessionInterface defines the user session
+type SessionInterface interface {
+	ChatIdentifier
+	UserIdentifier
+	PersistentSaver
+	DataGetSetter
+	IsNew() bool
+	HasLeft() bool
+	HasCome() bool
+	Locale() string
+	UserName() string
+	Identifiable
+	SetLocale(string)
+	ChatTitle() string
+	IsOneToOne() bool
+}
+
+type ChatSession interface {
+	Identifiable
+	ChatIdentifier
+	UserIdentifier
+	DataGetSetter
+	PersistentSaver
+	UserName() string
+	ChatTitle() string
+	IsOneToOne() bool
+	SetLocale(string)
+}
+
+type ActionSessionInterface interface {
+	DataGetSetter
+	PersistentSaver
+	ChatIdentifier
+	IsNew() bool
+}
+
 //ActionFactory generates Executers
 func ActionFactory(
-	session SessionInterface,
+	session ActionSessionInterface,
 	getters actionExecuterFactoryConfig,
 	sender SenderInterface,
 	out chan Executer,
@@ -21,7 +57,7 @@ func ActionFactory(
 			handlersProvider: handlersProvider,
 			getters: actionExecuterFactoryConfig{
 				cmdGetter:       func() string { return "" },
-				argsGetter:      func() []ArgInterface { return []ArgInterface{Arg{session}} },
+				argsGetter:      func() Args { return args{[]arg{arg{session}}, ""} },
 				sourceMsgGetter: func() (r BotMessageInterface) { return },
 			},
 			sender: sender,
@@ -45,7 +81,7 @@ func ActionFactory(
 
 //Action provides the context for the user command
 type Action struct {
-	session     SessionInterface
+	session     ActionSessionInterface
 	LastCommand string
 	getters     actionExecuterFactoryConfig
 
@@ -91,7 +127,7 @@ func (a *Action) Id() int64 {
 }
 
 //Args allow user to access command  args inside ActionHandler through the Context()
-func (a *Action) Args() []ArgInterface {
+func (a *Action) Args() Args {
 	return a.getters.argsGetter()
 }
 
@@ -103,8 +139,11 @@ func (a *Action) Error(e interface{}) {
 }
 
 //Session allow user to access the session inside ActionHandler through the Context()
-func (a *Action) Session() SessionInterface {
-	return a.session
+func (a *Action) Session() ChatSession {
+	if v, ok := a.session.(SessionInterface); ok {
+		return v
+	}
+	return nil
 }
 
 //SourceMessage allow user to access the session inside ActionHandler through the Context()
@@ -124,10 +163,10 @@ func (a *Action) Finish() {
 
 //ActionContextInterface defines the context for ActionHandler
 type ActionContextInterface interface {
-	Args() []ArgInterface
+	Args() Args
 	Output() OutMsgFactoryInterface
 	Error(interface{})
-	Session() SessionInterface
+	Session() ChatSession
 	SourceMessage() BotMessageInterface
 	Finish()
 }

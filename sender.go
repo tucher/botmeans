@@ -2,11 +2,13 @@ package botmeans
 
 import (
 	"github.com/go-telegram-bot-api/telegram-bot-api"
+	"log"
 )
 
 //OutMsgFactoryInterface allows users to create or edit messages inside ActionHandlers
 type OutMsgFactoryInterface interface {
 	Create(templateName string, Data interface{})
+	CreateWithCustomReplyKeyboard(templateName string, Data interface{}, kdb [][]MessageButton)
 	Edit(msg BotMessageInterface, templateName string, Data interface{})
 	Notify(BotMessageInterface, string, bool)
 	SimpleText(text string)
@@ -23,10 +25,19 @@ type Sendable interface {
 	Send() bool
 }
 
+type Localizer interface {
+	Locale() string
+}
+
+type senderSession interface {
+	ChatIdentifier
+	Localizer
+}
+
 //Sender implements SenderInterface
 type Sender struct {
 	msgFactory  func() BotMessageInterface
-	session     SessionInterface
+	session     senderSession
 	bot         *tgbotapi.BotAPI
 	templateDir string
 }
@@ -50,6 +61,32 @@ func (f *Sender) Create(templateName string, Data interface{}) {
 	if f.bot != nil {
 		if sentMsg, err := f.bot.Send(toSent); err == nil {
 			botMsg.SetID(int64(sentMsg.MessageID))
+		}
+	}
+
+	botMsg.Save()
+}
+
+//Create creates new telegram message from template using custom reply keyboard
+func (f *Sender) CreateWithCustomReplyKeyboard(templateName string, Data interface{}, kbd [][]MessageButton) {
+	botMsg := f.msgFactory()
+	botMsg.SetData(Data)
+
+	params := renderFromTemplate(f.templateDir, templateName, f.session.Locale(), Data)
+
+	toSent := tgbotapi.NewMessage(f.session.ChatId(), params.text)
+	toSent.ParseMode = params.ParseMode
+
+	toSent.ReplyMarkup = createReplyKeyboard(kbd)
+
+	if params.inlineKbdMarkup != nil {
+		toSent.ReplyMarkup = *params.inlineKbdMarkup
+	}
+	if f.bot != nil {
+		if sentMsg, err := f.bot.Send(toSent); err == nil {
+			botMsg.SetID(int64(sentMsg.MessageID))
+		} else {
+			log.Println(err)
 		}
 	}
 

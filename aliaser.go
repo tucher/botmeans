@@ -7,7 +7,7 @@ import (
 	// "log"
 	"os"
 	"path"
-	"strconv"
+	// "strconv"
 	"strings"
 )
 
@@ -33,7 +33,7 @@ func AliaserFromTemplates(sourceList []io.Reader) CommandAliaser {
 
 	}
 
-	return func(text string) (cmd string, args []ArgInterface, ook bool) {
+	return func(text string) (cmd string, args Args, ook bool) {
 		if r, ok := ret[text]; ok {
 			cmd = r.Cmd
 			args = r.Args
@@ -63,14 +63,14 @@ func AliaserFromTemplateDir(p string) CommandAliaser {
 
 type retStruct struct {
 	Cmd  string
-	Args []ArgInterface
+	Args Args
 }
 
 func handleRow(row []MessageButton, ret *map[string]retStruct) {
 	for _, button := range row {
 		cmd := button.Command
 		text := button.Args
-		Args := []ArgInterface{}
+		arguments := []arg{}
 
 		splitted := []string{}
 		for _, a := range strings.Split(text, " ") {
@@ -81,16 +81,9 @@ func handleRow(row []MessageButton, ret *map[string]retStruct) {
 		}
 
 		for _, str := range splitted {
-			if val, ok := strconv.ParseFloat(str, 64); ok == nil {
-				Args = append(Args, Arg{val})
-			} else {
-				Args = append(Args, Arg{str})
-			}
+			arguments = append(arguments, arg{str})
 		}
-		(*ret)[button.Text] = struct {
-			Cmd  string
-			Args []ArgInterface
-		}{cmd, Args}
+		(*ret)[button.Text] = retStruct{cmd, args{arguments, text}}
 	}
 }
 

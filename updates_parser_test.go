@@ -20,23 +20,25 @@ func TestUpdatesParser(t *testing.T) {
 		return nil, false
 	}
 	actionFactory := func(
-		session SessionInterface,
+		s interface{},
 		getters actionExecuterFactoryConfig,
 		out chan Executer,
 	) {
-		ActionFactory(
-			session,
-			getters,
-			&Sender{session: session, msgFactory: func() BotMessageInterface { return &BotMessage{} }},
-			out,
-			handlersProvider,
-		)
+		if session, ok := s.(SessionInterface); ok {
+			ActionFactory(
+				session,
+				getters,
+				&Sender{session: session, msgFactory: func() BotMessageInterface { return &BotMessage{} }},
+				out,
+				handlersProvider,
+			)
+		}
 	}
 
 	mutex := sync.Mutex{}
 	sessionIdFlags := make(map[string]struct{})
 
-	sessionFactory := func(base SessionBase) (SessionInterface, error) {
+	sessionFactory := func(base SessionBase) (interface{}, error) {
 		stringID := fmt.Sprintf("%v:%v:%v", base.TelegramChatID, base.TelegramUserID, base.TelegramUserName)
 		mutex.Lock()
 		_, ok := sessionIdFlags[stringID]
@@ -45,10 +47,12 @@ func TestUpdatesParser(t *testing.T) {
 		return &Session{SessionBase: base, db: nil, isNew: !ok}, nil
 	}
 
-	aliaser := func(string) (string, []ArgInterface, bool) { return "", []ArgInterface{}, false }
+	aliaser := func(string) (string, Args, bool) { return "", args{}, false }
 
-	argsParser := func(tgUpdate tgbotapi.Update) []ArgInterface {
-		return ArgsParser(tgUpdate, sessionFactory, aliaser)
+	argsParser := func(tgUpdate tgbotapi.Update) (r Args) {
+		r = ArgsParser(tgUpdate, sessionFactory, aliaser)
+		// t.Logf("%+v", r)
+		return
 	}
 
 	cmdParser := func(tgUpdate tgbotapi.Update) string {
@@ -89,14 +93,14 @@ func TestUpdatesParser(t *testing.T) {
 					session: &Session{SessionBase: SessionBase{42, "fuuu", 24, false, false}, isNew: true},
 					getters: actionExecuterFactoryConfig{
 						cmdGetter:  func() string { return "" },
-						argsGetter: func() []ArgInterface { return []ArgInterface{Arg{}} },
+						argsGetter: func() Args { return args{[]arg{arg{}}, "session"} },
 					},
 				},
 				&Action{
 					session: &Session{SessionBase: SessionBase{42, "fuuu", 24, false, false}, isNew: true},
 					getters: actionExecuterFactoryConfig{
 						cmdGetter:  func() string { return "" },
-						argsGetter: func() []ArgInterface { return []ArgInterface{Arg{"blabla"}} },
+						argsGetter: func() Args { return args{[]arg{arg{"blabla"}}, "blabla"} },
 					},
 				},
 			},
@@ -114,7 +118,7 @@ func TestUpdatesParser(t *testing.T) {
 					session: &Session{SessionBase: SessionBase{42, "fuuu", 24, false, false}},
 					getters: actionExecuterFactoryConfig{
 						cmdGetter:  func() string { return "cmd1" },
-						argsGetter: func() []ArgInterface { return []ArgInterface{Arg{"/cmd1"}} },
+						argsGetter: func() Args { return args{[]arg{arg{"/cmd1"}}, "/cmd1"} },
 					},
 				},
 			},
@@ -132,7 +136,7 @@ func TestUpdatesParser(t *testing.T) {
 					session: &Session{SessionBase: SessionBase{42, "fuuu", 24, false, false}},
 					getters: actionExecuterFactoryConfig{
 						cmdGetter:  func() string { return "cmd1" },
-						argsGetter: func() []ArgInterface { return []ArgInterface{Arg{"/cmd1"}, Arg{"ffuuu"}, Arg{9.75}} },
+						argsGetter: func() Args { return args{[]arg{arg{"/cmd1"}, arg{"ffuuu"}, arg{"9.75"}}, "/cmd1 ffuuu 9.75"} },
 					},
 				},
 			},
@@ -171,15 +175,17 @@ func TestUpdatesParser(t *testing.T) {
 						fail = true
 						t.Log("Wrong cmd", action.getters.cmdGetter(), testEntry.result[lastIndex].getters.cmdGetter())
 					}
-					if len(action.getters.argsGetter()) != len(testEntry.result[lastIndex].getters.argsGetter()) {
+					if action.getters.argsGetter().Count() != testEntry.result[lastIndex].getters.argsGetter().Count() {
 						fail = true
-						t.Log("Wrong args len", action.getters.argsGetter(), testEntry.result[lastIndex].getters.argsGetter())
+						t.Log("Wrong args len", action.getters.argsGetter().Raw(), testEntry.result[lastIndex].getters.argsGetter().Raw())
 					} else {
-						for i := range action.getters.argsGetter() {
-							_, ok := action.getters.argsGetter()[i].NewSession()
-							if action.getters.argsGetter()[i] != testEntry.result[lastIndex].getters.argsGetter()[i] && ok != true {
+						for i := range make([]int, action.getters.argsGetter().Count()) {
+							_, ok := action.getters.argsGetter().At(i).NewSession()
+							a1, _ := action.getters.argsGetter().At(i).String()
+							a2, _ := testEntry.result[lastIndex].getters.argsGetter().At(i).String()
+							if a1 != a2 && ok != true {
 								fail = true
-								t.Log("Wrong arg: ", action.getters.argsGetter()[i], testEntry.result[lastIndex].getters.argsGetter()[i])
+								t.Log("Wrong arg: ", a1, a2)
 								break
 							}
 						}

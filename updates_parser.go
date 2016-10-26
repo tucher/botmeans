@@ -10,29 +10,12 @@ type ChatIdentifier interface {
 	ChatId() int64
 }
 
-//SessionInterface defines the user session
-type SessionInterface interface {
-	ChatIdentifier
-	UserIdentifier
-	PersistentSaver
-	DataGetSetter
-	IsNew() bool
-	HasLeft() bool
-	HasCome() bool
-	Locale() string
-	UserName() string
-	Identifiable
-	SetLocale(string)
-	ChatTitle() string
-	IsOneToOne() bool
-}
-
 //SessionFactory creates the session from given session base
-type SessionFactory func(base SessionBase) (SessionInterface, error)
+type SessionFactory func(base SessionBase) (interface{}, error)
 
 //ActionExecuterFactory creates Executers from given session, cmd, args and source message
 type ActionExecuterFactory func(
-	SessionInterface,
+	interface{},
 	actionExecuterFactoryConfig,
 	chan Executer,
 )
@@ -44,7 +27,7 @@ type BotMessageFactory func(int64, int64, string) BotMessageInterface
 type CmdParserFunc func(tgbotapi.Update) string
 
 //ArgsParserFunc returns args of command for the given update
-type ArgsParserFunc func(tgbotapi.Update) []ArgInterface
+type ArgsParserFunc func(tgbotapi.Update) Args
 
 type parserConfig struct {
 	sessionFactory        SessionFactory
@@ -99,7 +82,7 @@ func createTGUpdatesParser(
 						session,
 						actionExecuterFactoryConfig{
 							func() string { return pC.cmdParser(tgUpdate) },
-							func() []ArgInterface { return pC.argsParser(tgUpdate) },
+							func() Args { return pC.argsParser(tgUpdate) },
 							func() BotMessageInterface { return pC.botMessageFactory(chatId, msgId, callbackID) },
 						},
 						cmdQueueChan)
@@ -115,6 +98,6 @@ func createTGUpdatesParser(
 
 type actionExecuterFactoryConfig struct {
 	cmdGetter       func() string
-	argsGetter      func() []ArgInterface
+	argsGetter      func() Args
 	sourceMsgGetter func() BotMessageInterface
 }

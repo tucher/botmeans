@@ -61,7 +61,14 @@ func (session *Session) UserId() int64 {
 
 //SetData sets internal UserData field to JSON representation of given value
 func (session *Session) SetData(value interface{}) {
+	if session.db != nil {
+		s := Session{}
+		if session.db.Where("id=?", session.ID).First(&s).Error == nil {
+			session.UserData = s.UserData
+		}
+	}
 	session.UserData = serialize(session.UserData, value)
+	session.Save()
 }
 
 //GetData extracts internal UserData field to given value

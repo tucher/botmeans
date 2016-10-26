@@ -50,7 +50,7 @@ func TestActionExecute(t *testing.T) {
 		session,
 		actionExecuterFactoryConfig{
 			func() string { return "cmd1" },
-			func() []ArgInterface { return []ArgInterface{Arg{"/cmd1"}, Arg{"ffuuu"}, Arg{9.75}} },
+			func() Args { return args{[]arg{arg{"/cmd1"}, arg{"ffuuu"}, arg{9.75}}, ""} },
 			func() BotMessageInterface { return &BotMessage{} },
 		},
 		sender,

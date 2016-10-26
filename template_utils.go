@@ -101,6 +101,7 @@ func createInlineKeyboard(buttons [][]MessageButton) *tgbotapi.InlineKeyboardMar
 		inlineKbdMarkup = tgbotapi.NewInlineKeyboardMarkup(kbdRows...)
 	} else {
 		return nil
+		inlineKbdMarkup.InlineKeyboard = make([][]tgbotapi.InlineKeyboardButton, 0)
 	}
 	return &inlineKbdMarkup
 }
@@ -120,7 +121,7 @@ func createReplyKeyboard(buttons [][]MessageButton) *tgbotapi.ReplyKeyboardMarku
 		replyKbdMarkup = tgbotapi.NewReplyKeyboard(kbdRows...)
 		replyKbdMarkup.OneTimeKeyboard = true
 	} else {
-		return nil
+		replyKbdMarkup.Keyboard = make([][]tgbotapi.KeyboardButton, 0)
 	}
 	return &replyKbdMarkup
 }

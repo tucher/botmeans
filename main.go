@@ -50,9 +50,12 @@ func New(DB *gorm.DB, netConfig NetConfig, tlgConfig TelegramConfig) (*MeansBot,
 		tlgConfig: tlgConfig,
 	}
 
-	ret.bot.RemoveWebhook()
-	_, err = ret.bot.SetWebhook(tgbotapi.NewWebhookWithCert(fmt.Sprintf("https://%v:8443/%v", ret.tlgConfig.WebhookHost, ret.bot.Token),
-		ret.tlgConfig.SSLCertFile))
+	// ret.bot.RemoveWebhook()
+	// _, err = ret.bot.SetWebhook(tgbotapi.NewWebhookWithCert(fmt.Sprintf("https://%v:8443/%v", ret.tlgConfig.WebhookHost, ret.bot.Token),
+	// 	ret.tlgConfig.SSLCertFile))
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	SessionInitDB(DB)
 	BotMessageInitDB(DB)
@@ -63,29 +66,31 @@ func New(DB *gorm.DB, netConfig NetConfig, tlgConfig TelegramConfig) (*MeansBot,
 //Run starts updates handling. Returns stop chan
 func (ui *MeansBot) Run(handlersProvider ActionHandlersProvider, templateDir string) chan interface{} {
 	actionFactory := func(
-		session SessionInterface,
+		s interface{},
 		getters actionExecuterFactoryConfig,
 		out chan Executer,
 	) {
-		ActionFactory(
-			session,
-			getters,
-			&Sender{
-				session:     session,
-				bot:         ui.bot,
-				templateDir: templateDir,
-				msgFactory:  func() BotMessageInterface { return NewBotMessage(session.ChatId(), ui.db) },
-			},
-			out,
-			handlersProvider,
-		)
+		if session, ok := s.(SessionInterface); ok {
+			ActionFactory(
+				session,
+				getters,
+				&Sender{
+					session:     session,
+					bot:         ui.bot,
+					templateDir: templateDir,
+					msgFactory:  func() BotMessageInterface { return NewBotMessage(session.ChatId(), ui.db) },
+				},
+				out,
+				handlersProvider,
+			)
+		}
 	}
 	botID, _ := strconv.ParseInt(strings.Split(ui.bot.Token, ":")[0], 10, 64)
-	sessionFactory := func(base SessionBase) (SessionInterface, error) {
+	sessionFactory := func(base SessionBase) (interface{}, error) {
 		return SessionLoader(base, ui.db, botID, ui.bot)
 	}
 	aliaser := AliaserFromTemplateDir(templateDir)
-	argsParser := func(tgUpdate tgbotapi.Update) []ArgInterface {
+	argsParser := func(tgUpdate tgbotapi.Update) Args {
 		return ArgsParser(tgUpdate, sessionFactory, aliaser)
 	}
 	cmdParser := func(tgUpdate tgbotapi.Update) string {
