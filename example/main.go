@@ -23,8 +23,8 @@ func handlersProvider(id string) (ret botmeans.ActionHandler, ok bool) {
 		ret = func(context botmeans.ActionContextInterface) {
 			log.Print("Cmd1 Command")
 			contextChan <- context
-			if len(context.Args()) == 1 {
-				if s, _ := context.Args()[0].String(); s == "end" {
+			if context.Args().Count() == 1 {
+				if s, _ := context.Args().At(0).String(); s == "end" {
 					context.Finish()
 				}
 			}
@@ -73,7 +73,8 @@ func main() {
 		case c := <-contextChan:
 			log.Printf("Session: (%+v)", c.Session())
 			log.Printf("Args:")
-			for i, arg := range c.Args() {
+			for i := 0; i < c.Args().Count(); i++ {
+				arg := c.Args().At(i)
 				if s, ok := arg.Mention(); ok {
 					log.Println("   ", i, ": Mention ", s)
 					// log.Println(s.Save())
