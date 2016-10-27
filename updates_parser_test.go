@@ -28,7 +28,9 @@ func TestUpdatesParser(t *testing.T) {
 			ActionFactory(
 				session,
 				getters,
-				&Sender{session: session, msgFactory: func() BotMessageInterface { return &BotMessage{} }},
+				func(senderSession) SenderInterface {
+					return &Sender{session: session, msgFactory: func() BotMessageInterface { return &BotMessage{} }}
+				},
 				out,
 				handlersProvider,
 			)

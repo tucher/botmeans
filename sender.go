@@ -29,6 +29,8 @@ type Localizer interface {
 	Locale() string
 }
 
+type senderFactory func(s senderSession) SenderInterface
+
 type senderSession interface {
 	ChatIdentifier
 	Localizer

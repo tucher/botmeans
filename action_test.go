@@ -53,7 +53,7 @@ func TestActionExecute(t *testing.T) {
 			func() Args { return args{[]arg{arg{"/cmd1"}, arg{"ffuuu"}, arg{9.75}}, ""} },
 			func() BotMessageInterface { return &BotMessage{} },
 		},
-		sender,
+		func(senderSession) SenderInterface { return sender },
 		out,
 		handlersProvider,
 	)

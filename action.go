@@ -33,6 +33,7 @@ type ChatSession interface {
 	ChatTitle() string
 	IsOneToOne() bool
 	SetLocale(string)
+	Locale() string
 }
 
 type ActionSessionInterface interface {
@@ -40,13 +41,14 @@ type ActionSessionInterface interface {
 	PersistentSaver
 	ChatIdentifier
 	IsNew() bool
+	Locale() string
 }
 
 //ActionFactory generates Executers
 func ActionFactory(
 	session ActionSessionInterface,
 	getters actionExecuterFactoryConfig,
-	sender SenderInterface,
+	senderFactory senderFactory,
 	out chan Executer,
 	handlersProvider ActionHandlersProvider,
 ) {
@@ -60,7 +62,8 @@ func ActionFactory(
 				argsGetter:      func() Args { return args{[]arg{arg{session}}, ""} },
 				sourceMsgGetter: func() (r BotMessageInterface) { return },
 			},
-			sender: sender,
+			senderFactory: senderFactory,
+			execChan:      out,
 		}
 	}
 	//if _, ok := handlersProvider(getters.cmdGetter()); ok == true {
@@ -69,7 +72,8 @@ func ActionFactory(
 		session:          session,
 		handlersProvider: handlersProvider,
 		getters:          getters,
-		sender:           sender,
+		senderFactory:    senderFactory,
+		execChan:         out,
 	}
 	session.GetData(ret)
 	out <- ret
@@ -86,8 +90,9 @@ type Action struct {
 	getters     actionExecuterFactoryConfig
 
 	handlersProvider ActionHandlersProvider
-	sender           SenderInterface
+	senderFactory    senderFactory
 	err              interface{}
+	execChan         chan Executer
 }
 
 //Execute implements Execute for BotMachine
@@ -153,12 +158,38 @@ func (a *Action) SourceMessage() BotMessageInterface {
 
 //Output allow user to access the OutMsgFactoryInterface inside ActionHandler through the Context()
 func (a *Action) Output() OutMsgFactoryInterface {
-	return a.sender
+	return a.senderFactory(a.session)
 }
 
 //Finish allow user to access finish command processing inside ActionHandler through the Context()
 func (a *Action) Finish() {
 	a.LastCommand = ""
+}
+
+type execHelper struct {
+	a *Action
+	f ActionHandler
+}
+
+func (helper execHelper) Id() int64 {
+	return helper.a.Id()
+}
+
+func (helper execHelper) Execute() {
+	helper.f(helper.a)
+}
+
+//ExecuteInSession allows to execute some function in the same goroutine as other action for given session.
+//Can be used to exec commands for chat created from another chat
+func (a *Action) ExecuteInSession(s ChatSession, f ActionHandler) {
+	if session, ok := s.(ActionSessionInterface); ok {
+		a.execChan <- execHelper{&Action{
+			session:          session,
+			getters:          a.getters,
+			handlersProvider: a.handlersProvider,
+			senderFactory:    a.senderFactory,
+		}, f}
+	}
 }
 
 //ActionContextInterface defines the context for ActionHandler
@@ -169,6 +200,7 @@ type ActionContextInterface interface {
 	Session() ChatSession
 	SourceMessage() BotMessageInterface
 	Finish()
+	ExecuteInSession(s ChatSession, f ActionHandler)
 }
 
 //AbortedContextError is used to distinguish aborted context from other panics
