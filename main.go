@@ -79,7 +79,7 @@ func (ui *MeansBot) Run(handlersProvider ActionHandlersProvider, templateDir str
 						session:     s,
 						bot:         ui.bot,
 						templateDir: templateDir,
-						msgFactory:  func() BotMessageInterface { return NewBotMessage(session.ChatId(), ui.db) },
+						msgFactory:  func() BotMessageInterface { return NewBotMessage(s.ChatId(), ui.db) },
 					}
 				},
 				out,

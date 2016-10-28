@@ -2,7 +2,7 @@ package botmeans
 
 import (
 	"github.com/go-telegram-bot-api/telegram-bot-api"
-	"log"
+	// "log"
 )
 
 //OutMsgFactoryInterface allows users to create or edit messages inside ActionHandlers
@@ -88,7 +88,7 @@ func (f *Sender) CreateWithCustomReplyKeyboard(templateName string, Data interfa
 		if sentMsg, err := f.bot.Send(toSent); err == nil {
 			botMsg.SetID(int64(sentMsg.MessageID))
 		} else {
-			log.Println(err)
+			// log.Println(err)
 		}
 	}
 
