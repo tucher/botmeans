@@ -50,6 +50,7 @@ type tgMsgParams struct {
 	text            string
 	inlineKbdMarkup *tgbotapi.InlineKeyboardMarkup
 	replyKbdMarkup  *tgbotapi.ReplyKeyboardMarkup
+	replyKbdHide    *tgbotapi.ReplyKeyboardHide
 }
 
 func renderFromTemplate(
@@ -68,9 +69,13 @@ func renderFromTemplate(
 	if _, ok := msgTemplate.Template[locale]; !ok {
 		locale = ""
 	}
-	ret.text, _ = renderText(msgTemplate.Template[locale], Data, templ)
+	ret.text, err = renderText(msgTemplate.Template[locale], Data, templ)
 	ret.inlineKbdMarkup = createInlineKeyboard(msgTemplate.Keyboard[locale])
 	ret.replyKbdMarkup = createReplyKeyboard(msgTemplate.ReplyKeyboard[locale])
+	if len(msgTemplate.ReplyKeyboard[locale]) == 0 {
+		h := tgbotapi.NewHideKeyboard(true)
+		ret.replyKbdHide = &h
+	}
 	return ret
 }
 

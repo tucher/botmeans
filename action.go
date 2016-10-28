@@ -93,6 +93,7 @@ type Action struct {
 	senderFactory    senderFactory
 	err              interface{}
 	execChan         chan Executer
+	passedCmd        string
 }
 
 //Execute implements Execute for BotMachine
@@ -108,10 +109,10 @@ func (a *Action) Execute() {
 		}
 	}()
 	ok := false
-	cmd := a.getters.cmdGetter()
+	a.passedCmd = a.getters.cmdGetter()
 
-	if _, ok = a.handlersProvider(cmd); ok == true && cmd != "" {
-		a.LastCommand = cmd
+	if _, ok = a.handlersProvider(a.passedCmd); ok == true && a.passedCmd != "" {
+		a.LastCommand = a.passedCmd
 	} else if _, ok = a.handlersProvider(a.LastCommand); ok == true {
 
 	}
@@ -166,6 +167,10 @@ func (a *Action) Finish() {
 	a.LastCommand = ""
 }
 
+func (a *Action) Cmd() string {
+	return a.passedCmd
+}
+
 type execHelper struct {
 	a *Action
 	f ActionHandler
@@ -194,6 +199,7 @@ func (a *Action) ExecuteInSession(s ChatSession, f ActionHandler) {
 
 //ActionContextInterface defines the context for ActionHandler
 type ActionContextInterface interface {
+	Cmd() string
 	Args() Args
 	Output() OutMsgFactoryInterface
 	Error(interface{})

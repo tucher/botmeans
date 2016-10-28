@@ -56,6 +56,9 @@ func (f *Sender) Create(templateName string, Data interface{}) {
 	if params.replyKbdMarkup != nil {
 		toSent.ReplyMarkup = *params.replyKbdMarkup
 	}
+	if params.replyKbdHide != nil {
+		toSent.ReplyMarkup = params.replyKbdHide
+	}
 
 	if params.inlineKbdMarkup != nil {
 		toSent.ReplyMarkup = *params.inlineKbdMarkup
@@ -79,7 +82,12 @@ func (f *Sender) CreateWithCustomReplyKeyboard(templateName string, Data interfa
 	toSent := tgbotapi.NewMessage(f.session.ChatId(), params.text)
 	toSent.ParseMode = params.ParseMode
 
-	toSent.ReplyMarkup = createReplyKeyboard(kbd)
+	if params.replyKbdMarkup != nil {
+		params.replyKbdMarkup.Keyboard = append(params.replyKbdMarkup.Keyboard, createReplyKeyboard(kbd).Keyboard...)
+		toSent.ReplyMarkup = *params.replyKbdMarkup
+	} else {
+		toSent.ReplyMarkup = createReplyKeyboard(kbd)
+	}
 
 	if params.inlineKbdMarkup != nil {
 		toSent.ReplyMarkup = *params.inlineKbdMarkup
