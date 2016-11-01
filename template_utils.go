@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/go-telegram-bot-api/telegram-bot-api"
 	"io/ioutil"
-	// "log"
 	"strings"
 	"text/template"
 	"unicode"
@@ -59,6 +58,7 @@ func renderFromTemplate(
 	locale string,
 	Data interface{},
 ) (tgMsgParams, error) {
+
 	ret := tgMsgParams{}
 	templ := getTemplater()
 	msgTemplate, err := readMsgTemplate(templateDir + "/" + templateName + ".json")
@@ -69,14 +69,17 @@ func renderFromTemplate(
 	if _, ok := msgTemplate.Template[locale]; !ok {
 		locale = ""
 	}
+
 	ret.text, err = renderText(msgTemplate.Template[locale], Data, templ)
+
 	ret.inlineKbdMarkup = createInlineKeyboard(msgTemplate.Keyboard[locale])
 	ret.replyKbdMarkup = createReplyKeyboard(msgTemplate.ReplyKeyboard[locale])
 	if len(msgTemplate.ReplyKeyboard[locale]) == 0 {
 		h := tgbotapi.NewHideKeyboard(true)
 		ret.replyKbdHide = &h
 	}
-	return ret, nil
+
+	return ret, err
 }
 
 func readMsgTemplate(path string) (ret MessageTemplate, err error) {
@@ -133,12 +136,12 @@ func createReplyKeyboard(buttons [][]MessageButton) *tgbotapi.ReplyKeyboardMarku
 }
 
 func renderText(templateText string, data interface{}, templ *template.Template) (text string, err error) {
-	// log.Printf("\n%+v", data)
-	if t, e := templ.Parse(templateText); err != nil {
+	if t, e := templ.Parse(templateText); e != nil {
 		err = e
 	} else {
+
 		bfr := &bytes.Buffer{}
-		if e := t.Execute(bfr, data); err != nil {
+		if e := t.Execute(bfr, data); e != nil {
 			err = e
 			text = templateText
 		} else {
