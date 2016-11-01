@@ -190,3 +190,22 @@ func SessionLoader(base SessionBase, db *gorm.DB, BotID int64, api *tgbotapi.Bot
 
 	return session, err
 }
+
+type NewSessionCreator func(chatId int64, username string) (SessionInterface, error)
+
+//SessionInterface defines the user session
+type SessionInterface interface {
+	ChatIdentifier
+	UserIdentifier
+	PersistentSaver
+	DataGetSetter
+	IsNew() bool
+	HasLeft() bool
+	HasCome() bool
+	Locale() string
+	UserName() string
+	Identifiable
+	SetLocale(string)
+	ChatTitle() string
+	IsOneToOne() bool
+}

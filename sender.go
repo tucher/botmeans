@@ -7,11 +7,11 @@ import (
 
 //OutMsgFactoryInterface allows users to create or edit messages inside ActionHandlers
 type OutMsgFactoryInterface interface {
-	Create(templateName string, Data interface{})
-	CreateWithCustomReplyKeyboard(templateName string, Data interface{}, kdb [][]MessageButton)
-	Edit(msg BotMessageInterface, templateName string, Data interface{})
+	Create(templateName string, Data interface{}) error
+	CreateWithCustomReplyKeyboard(templateName string, Data interface{}, kdb [][]MessageButton) error
+	Edit(msg BotMessageInterface, templateName string, Data interface{}) error
 	Notify(BotMessageInterface, string, bool)
-	SimpleText(text string)
+	SimpleText(text string) error
 }
 
 //SenderInterface is the abstraction for the Sender
@@ -45,12 +45,14 @@ type Sender struct {
 }
 
 //Create creates new telegram message from template
-func (f *Sender) Create(templateName string, Data interface{}) {
+func (f *Sender) Create(templateName string, Data interface{}) error {
 	botMsg := f.msgFactory()
 	botMsg.SetData(Data)
 
-	params := renderFromTemplate(f.templateDir, templateName, f.session.Locale(), Data)
-
+	params, err := renderFromTemplate(f.templateDir, templateName, f.session.Locale(), Data)
+	if err != nil {
+		return err
+	}
 	toSent := tgbotapi.NewMessage(f.session.ChatId(), params.text)
 	toSent.ParseMode = params.ParseMode
 	if params.replyKbdMarkup != nil {
@@ -66,18 +68,24 @@ func (f *Sender) Create(templateName string, Data interface{}) {
 	if f.bot != nil {
 		if sentMsg, err := f.bot.Send(toSent); err == nil {
 			botMsg.SetID(int64(sentMsg.MessageID))
+		} else {
+			return err
 		}
 	}
 
 	botMsg.Save()
+	return nil
 }
 
 //Create creates new telegram message from template using custom reply keyboard
-func (f *Sender) CreateWithCustomReplyKeyboard(templateName string, Data interface{}, kbd [][]MessageButton) {
+func (f *Sender) CreateWithCustomReplyKeyboard(templateName string, Data interface{}, kbd [][]MessageButton) error {
 	botMsg := f.msgFactory()
 	botMsg.SetData(Data)
 
-	params := renderFromTemplate(f.templateDir, templateName, f.session.Locale(), Data)
+	params, err := renderFromTemplate(f.templateDir, templateName, f.session.Locale(), Data)
+	if err != nil {
+		return err
+	}
 
 	toSent := tgbotapi.NewMessage(f.session.ChatId(), params.text)
 	toSent.ParseMode = params.ParseMode
@@ -96,23 +104,27 @@ func (f *Sender) CreateWithCustomReplyKeyboard(templateName string, Data interfa
 		if sentMsg, err := f.bot.Send(toSent); err == nil {
 			botMsg.SetID(int64(sentMsg.MessageID))
 		} else {
-			// log.Println(err)
+			return nil
 		}
 	}
 
 	botMsg.Save()
+	return nil
 }
 
 //SimpleText creates new telegram message with given text
-func (f *Sender) SimpleText(text string) {
+func (f *Sender) SimpleText(text string) error {
 	botMsg := f.msgFactory()
 	toSent := tgbotapi.NewMessage(f.session.ChatId(), text)
 	if f.bot != nil {
 		if sentMsg, err := f.bot.Send(toSent); err == nil {
 			botMsg.SetID(int64(sentMsg.MessageID))
+		} else {
+			return err
 		}
 	}
 	botMsg.Save()
+	return nil
 }
 
 //Notify creates notification for callback queries
@@ -125,10 +137,12 @@ func (f *Sender) Notify(msg BotMessageInterface, callbackNotification string, sh
 }
 
 //Edit allows to edit existing messages
-func (f *Sender) Edit(msg BotMessageInterface, templateName string, Data interface{}) {
+func (f *Sender) Edit(msg BotMessageInterface, templateName string, Data interface{}) error {
 	msg.SetData(Data)
-	params := renderFromTemplate(f.templateDir, templateName, f.session.Locale(), Data)
-
+	params, err := renderFromTemplate(f.templateDir, templateName, f.session.Locale(), Data)
+	if err != nil {
+		return err
+	}
 	editConfig := tgbotapi.NewEditMessageText(f.session.ChatId(), int(msg.Id()), params.text)
 
 	if params.inlineKbdMarkup != nil {
@@ -140,4 +154,5 @@ func (f *Sender) Edit(msg BotMessageInterface, templateName string, Data interfa
 		f.bot.Send(editConfig)
 	}
 	msg.Save()
+	return nil
 }

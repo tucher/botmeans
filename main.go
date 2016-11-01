@@ -65,32 +65,35 @@ func New(DB *gorm.DB, netConfig NetConfig, tlgConfig TelegramConfig) (*MeansBot,
 
 //Run starts updates handling. Returns stop chan
 func (ui *MeansBot) Run(handlersProvider ActionHandlersProvider, templateDir string) chan interface{} {
+	botID, _ := strconv.ParseInt(strings.Split(ui.bot.Token, ":")[0], 10, 64)
+
+	sessionFactory := func(base SessionBase) (SessionInterface, error) {
+		return SessionLoader(base, ui.db, botID, ui.bot)
+	}
+
 	actionFactory := func(
-		s interface{},
+		sessionBase SessionBase,
+		sessionFactory SessionFactory,
 		getters actionExecuterFactoryConfig,
 		out chan Executer,
 	) {
-		if session, ok := s.(SessionInterface); ok {
-			ActionFactory(
-				session,
-				getters,
-				func(s senderSession) SenderInterface {
-					return &Sender{
-						session:     s,
-						bot:         ui.bot,
-						templateDir: templateDir,
-						msgFactory:  func() BotMessageInterface { return NewBotMessage(s.ChatId(), ui.db) },
-					}
-				},
-				out,
-				handlersProvider,
-			)
-		}
+		ActionFactory(
+			sessionBase,
+			sessionFactory,
+			getters,
+			func(s senderSession) SenderInterface {
+				return &Sender{
+					session:     s,
+					bot:         ui.bot,
+					templateDir: templateDir,
+					msgFactory:  func() BotMessageInterface { return NewBotMessage(s.ChatId(), ui.db) },
+				}
+			},
+			out,
+			handlersProvider,
+		)
 	}
-	botID, _ := strconv.ParseInt(strings.Split(ui.bot.Token, ":")[0], 10, 64)
-	sessionFactory := func(base SessionBase) (interface{}, error) {
-		return SessionLoader(base, ui.db, botID, ui.bot)
-	}
+
 	aliaser := AliaserFromTemplateDir(templateDir)
 	argsParser := func(tgUpdate tgbotapi.Update) Args {
 		return ArgsParser(tgUpdate, sessionFactory, aliaser)

@@ -11,11 +11,12 @@ type ChatIdentifier interface {
 }
 
 //SessionFactory creates the session from given session base
-type SessionFactory func(base SessionBase) (interface{}, error)
+type SessionFactory func(base SessionBase) (SessionInterface, error)
 
 //ActionExecuterFactory creates Executers from given session, cmd, args and source message
 type ActionExecuterFactory func(
-	interface{},
+	SessionBase,
+	SessionFactory,
 	actionExecuterFactoryConfig,
 	chan Executer,
 )
@@ -76,17 +77,16 @@ func createTGUpdatesParser(
 
 				}
 
-				session, err := pC.sessionFactory(SessionBase{TelegramUserID: userId, TelegramUserName: username, TelegramChatID: chatId})
-				if err == nil {
-					pC.actionExecuterFactory(
-						session,
-						actionExecuterFactoryConfig{
-							func() string { return pC.cmdParser(tgUpdate) },
-							func() Args { return pC.argsParser(tgUpdate) },
-							func() BotMessageInterface { return pC.botMessageFactory(chatId, msgId, callbackID) },
-						},
-						cmdQueueChan)
-				}
+				pC.actionExecuterFactory(
+					SessionBase{TelegramUserID: userId, TelegramUserName: username, TelegramChatID: chatId},
+					pC.sessionFactory,
+					actionExecuterFactoryConfig{
+						func() string { return pC.cmdParser(tgUpdate) },
+						func() Args { return pC.argsParser(tgUpdate) },
+						func() BotMessageInterface { return pC.botMessageFactory(chatId, msgId, callbackID) },
+					},
+					cmdQueueChan)
+
 				wg.Done()
 			}()
 		}
@@ -94,10 +94,4 @@ func createTGUpdatesParser(
 		close(cmdQueueChan)
 	}()
 	return cmdQueueChan
-}
-
-type actionExecuterFactoryConfig struct {
-	cmdGetter       func() string
-	argsGetter      func() Args
-	sourceMsgGetter func() BotMessageInterface
 }

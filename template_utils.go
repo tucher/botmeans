@@ -58,12 +58,12 @@ func renderFromTemplate(
 	templateName string,
 	locale string,
 	Data interface{},
-) tgMsgParams {
+) (tgMsgParams, error) {
 	ret := tgMsgParams{}
 	templ := getTemplater()
 	msgTemplate, err := readMsgTemplate(templateDir + "/" + templateName + ".json")
 	if err != nil {
-		return ret
+		return ret, err
 	}
 	ret.ParseMode = msgTemplate.ParseMode
 	if _, ok := msgTemplate.Template[locale]; !ok {
@@ -76,7 +76,7 @@ func renderFromTemplate(
 		h := tgbotapi.NewHideKeyboard(true)
 		ret.replyKbdHide = &h
 	}
-	return ret
+	return ret, nil
 }
 
 func readMsgTemplate(path string) (ret MessageTemplate, err error) {
@@ -124,7 +124,8 @@ func createReplyKeyboard(buttons [][]MessageButton) *tgbotapi.ReplyKeyboardMarku
 			kbdRows = append(kbdRows, r)
 		}
 		replyKbdMarkup = tgbotapi.NewReplyKeyboard(kbdRows...)
-		replyKbdMarkup.OneTimeKeyboard = true
+		replyKbdMarkup.OneTimeKeyboard = false
+		replyKbdMarkup.ResizeKeyboard = true
 	} else {
 		replyKbdMarkup.Keyboard = make([][]tgbotapi.KeyboardButton, 0)
 	}

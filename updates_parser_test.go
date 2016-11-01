@@ -8,7 +8,6 @@ import (
 )
 
 func TestUpdatesParser(t *testing.T) {
-
 	handlersProvider := func(id string) (ActionHandler, bool) {
 		switch id {
 		case "cmd1":
@@ -20,27 +19,27 @@ func TestUpdatesParser(t *testing.T) {
 		return nil, false
 	}
 	actionFactory := func(
-		s interface{},
+		sessionBase SessionBase,
+		sessionFactory SessionFactory,
 		getters actionExecuterFactoryConfig,
 		out chan Executer,
 	) {
-		if session, ok := s.(SessionInterface); ok {
-			ActionFactory(
-				session,
-				getters,
-				func(senderSession) SenderInterface {
-					return &Sender{session: session, msgFactory: func() BotMessageInterface { return &BotMessage{} }}
-				},
-				out,
-				handlersProvider,
-			)
-		}
+		ActionFactory(
+			sessionBase,
+			sessionFactory,
+			getters,
+			func(senderSession) SenderInterface {
+				return nil
+			},
+			out,
+			handlersProvider,
+		)
 	}
 
 	mutex := sync.Mutex{}
 	sessionIdFlags := make(map[string]struct{})
 
-	sessionFactory := func(base SessionBase) (interface{}, error) {
+	sessionFactory := func(base SessionBase) (SessionInterface, error) {
 		stringID := fmt.Sprintf("%v:%v:%v", base.TelegramChatID, base.TelegramUserID, base.TelegramUserName)
 		mutex.Lock()
 		_, ok := sessionIdFlags[stringID]
@@ -147,8 +146,8 @@ func TestUpdatesParser(t *testing.T) {
 	fail := false
 
 	for _, testEntry := range testData {
-
 		updatesChan <- testEntry.tgUpdate
+
 		lastIndex := 0
 
 		for a := range actionsChan {

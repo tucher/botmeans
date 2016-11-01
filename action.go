@@ -6,23 +6,6 @@ type ActionHandler func(context ActionContextInterface)
 //ActionHandlersProvider returns ActionHandler for given command
 type ActionHandlersProvider func(id string) (ActionHandler, bool)
 
-//SessionInterface defines the user session
-type SessionInterface interface {
-	ChatIdentifier
-	UserIdentifier
-	PersistentSaver
-	DataGetSetter
-	IsNew() bool
-	HasLeft() bool
-	HasCome() bool
-	Locale() string
-	UserName() string
-	Identifiable
-	SetLocale(string)
-	ChatTitle() string
-	IsOneToOne() bool
-}
-
 type ChatSession interface {
 	Identifiable
 	ChatIdentifier
@@ -44,18 +27,30 @@ type ActionSessionInterface interface {
 	Locale() string
 }
 
+type actionExecuterFactoryConfig struct {
+	cmdGetter       func() string
+	argsGetter      func() Args
+	sourceMsgGetter func() BotMessageInterface
+}
+
 //ActionFactory generates Executers
 func ActionFactory(
-	session ActionSessionInterface,
+	sessionBase SessionBase,
+	sessionFactory SessionFactory,
 	getters actionExecuterFactoryConfig,
 	senderFactory senderFactory,
 	out chan Executer,
 	handlersProvider ActionHandlersProvider,
 ) {
+	session, err := sessionFactory(sessionBase)
+	if err != nil {
+		return
+	}
 	if session.IsNew() {
 
 		out <- &Action{
 			session:          session,
+			sessionFactory:   sessionFactory,
 			handlersProvider: handlersProvider,
 			getters: actionExecuterFactoryConfig{
 				cmdGetter:       func() string { return "" },
@@ -70,6 +65,7 @@ func ActionFactory(
 
 	ret := &Action{
 		session:          session,
+		sessionFactory:   sessionFactory,
 		handlersProvider: handlersProvider,
 		getters:          getters,
 		senderFactory:    senderFactory,
@@ -85,9 +81,10 @@ func ActionFactory(
 
 //Action provides the context for the user command
 type Action struct {
-	session     ActionSessionInterface
-	LastCommand string
-	getters     actionExecuterFactoryConfig
+	session        ActionSessionInterface
+	sessionFactory SessionFactory
+	LastCommand    string
+	getters        actionExecuterFactoryConfig
 
 	handlersProvider ActionHandlersProvider
 	senderFactory    senderFactory
@@ -171,6 +168,29 @@ func (a *Action) Cmd() string {
 	return a.passedCmd
 }
 
+func (a *Action) CreateSession(base SessionBase) error {
+	session, err := a.sessionFactory(base)
+	if err != nil {
+		return err
+	}
+	if session.IsNew() {
+
+		a.execChan <- &Action{
+			session:          session,
+			sessionFactory:   a.sessionFactory,
+			handlersProvider: a.handlersProvider,
+			getters: actionExecuterFactoryConfig{
+				cmdGetter:       func() string { return "" },
+				argsGetter:      func() Args { return args{[]arg{arg{session}}, ""} },
+				sourceMsgGetter: func() (r BotMessageInterface) { return },
+			},
+			senderFactory: a.senderFactory,
+			execChan:      a.execChan,
+		}
+	}
+	return nil
+}
+
 type execHelper struct {
 	a *Action
 	f ActionHandler
@@ -207,6 +227,7 @@ type ActionContextInterface interface {
 	SourceMessage() BotMessageInterface
 	Finish()
 	ExecuteInSession(s ChatSession, f ActionHandler)
+	CreateSession(base SessionBase) error
 }
 
 //AbortedContextError is used to distinguish aborted context from other panics

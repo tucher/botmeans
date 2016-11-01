@@ -47,7 +47,10 @@ func TestActionExecute(t *testing.T) {
 	session := &Session{SessionBase: SessionBase{42, "fuuu", 24, false, false}}
 	sender := &Sender{session: session, msgFactory: func() BotMessageInterface { return &BotMessage{} }}
 	go ActionFactory(
-		session,
+		SessionBase{42, "fuuu", 24, false, false},
+		func(base SessionBase) (SessionInterface, error) {
+			return &Session{SessionBase: SessionBase{42, "fuuu", 24, false, false}}, nil
+		},
 		actionExecuterFactoryConfig{
 			func() string { return "cmd1" },
 			func() Args { return args{[]arg{arg{"/cmd1"}, arg{"ffuuu"}, arg{9.75}}, ""} },
