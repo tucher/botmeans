@@ -1,0 +1,11 @@
+{
+    "DB_ip": "localhost", 
+    "DB_port": 5432, 
+    "DB_login": "", 
+    "DB_pass": "", 
+    "DB_name": "",
+    "ListenPort": 0,
+    "ListenIP": "",
+    "WebhookHost": "botdomain.com",
+    "BotToken": ""
+}

@@ -66,7 +66,7 @@ func main() {
 
 	contextChan = make(chan botmeans.ActionContextInterface)
 
-	bot.Run(handlersProvider, "")
+	bot.Run(handlersProvider)
 	// enoughChan := time.After(time.Second * 2)
 	for {
 		select {

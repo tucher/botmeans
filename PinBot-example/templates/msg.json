@@ -1,0 +1,7 @@
+{
+    "Template": {
+        "": "<b>{{html .From}}, {{.CreatedAt}}:</b>\n{{html .Text}}"
+          
+    },
+    "ParseMode": "HTML"
+}

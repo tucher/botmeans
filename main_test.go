@@ -53,7 +53,7 @@ func TestMain(t *testing.T) {
 		}
 		return
 	}
-	bot.Run(handlersProvider, "")
+	bot.Run(handlersProvider)
 	enoughChan := time.After(time.Second * 2)
 	for {
 		select {

@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/jinzhu/gorm"
+	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -31,6 +33,7 @@ type TelegramConfig struct {
 	WebhookHost string
 	SSLCertFile string
 	BotName     string
+	TemplateDir string
 }
 
 //New creates new MeansBot instance
@@ -49,13 +52,17 @@ func New(DB *gorm.DB, netConfig NetConfig, tlgConfig TelegramConfig) (*MeansBot,
 		netConfig: netConfig,
 		tlgConfig: tlgConfig,
 	}
+	if os.Getenv("BOTMEANS_SET_WEBHOOK") == "TRUE" {
 
-	// ret.bot.RemoveWebhook()
-	// _, err = ret.bot.SetWebhook(tgbotapi.NewWebhookWithCert(fmt.Sprintf("https://%v:8443/%v", ret.tlgConfig.WebhookHost, ret.bot.Token),
-	// 	ret.tlgConfig.SSLCertFile))
-	// if err != nil {
-	// 	return nil, err
-	// }
+		ret.bot.RemoveWebhook()
+		_, err = ret.bot.SetWebhook(tgbotapi.NewWebhookWithCert(fmt.Sprintf("https://%v:8443/%v", ret.tlgConfig.WebhookHost, ret.bot.Token),
+			ret.tlgConfig.SSLCertFile))
+		if err != nil {
+			return nil, err
+		} else {
+			log.Println("Webhook set")
+		}
+	}
 
 	SessionInitDB(DB)
 	BotMessageInitDB(DB)
@@ -64,7 +71,8 @@ func New(DB *gorm.DB, netConfig NetConfig, tlgConfig TelegramConfig) (*MeansBot,
 }
 
 //Run starts updates handling. Returns stop chan
-func (ui *MeansBot) Run(handlersProvider ActionHandlersProvider, templateDir string) chan interface{} {
+func (ui *MeansBot) Run(handlersProvider ActionHandlersProvider) chan interface{} {
+	templateDir := ui.tlgConfig.TemplateDir
 	botID, _ := strconv.ParseInt(strings.Split(ui.bot.Token, ":")[0], 10, 64)
 
 	sessionFactory := func(base SessionBase) (SessionInterface, error) {
