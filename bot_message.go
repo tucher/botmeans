@@ -69,7 +69,9 @@ func (botMessage *BotMessage) CallbackID() string {
 //BotMessageDBLoader loads the message from db
 func BotMessageDBLoader(TelegramChatID int64, TelegramMsgID int64, CallbackID string, db *gorm.DB) BotMessageInterface {
 	ret := &BotMessage{}
-	db.Where("telegram_chat_id=? and telegram_msg_id=?", TelegramChatID, TelegramMsgID).Find(ret)
+	if TelegramMsgID != 0 {
+		db.Where("telegram_chat_id=? and telegram_msg_id=?", TelegramChatID, TelegramMsgID).Find(ret)
+	}
 	ret.db = db
 	ret.callbackID = CallbackID
 	ret.TelegramChatID = TelegramChatID
