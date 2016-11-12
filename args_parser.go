@@ -2,62 +2,140 @@ package botmeans
 
 import (
 	"github.com/go-telegram-bot-api/telegram-bot-api"
+	// "log"
+	// "reflect"
 	"strconv"
 	"strings"
 )
 
-type ArgInterface interface {
+//Arg defines the arg type, which is used to pass parsed args through the context
+type Arg interface {
 	String() (string, bool)
 	Float() (float64, bool)
 	Mention() (SessionInterface, bool)
-	NewSession() bool
-	LeftSession() bool
+	NewSession() (SessionInterface, bool)
+	LeftSession() (SessionInterface, bool)
+	ComeSession() (SessionInterface, bool)
 }
 
-type Arg struct {
+//arg is a Arg implementation
+type arg struct {
 	arg interface{}
 }
+type args struct {
+	a   []arg
+	raw string
+}
 
-func (a Arg) String() (string, bool) {
+func (a args) At(index int) Arg {
+	if len(a.a) > index {
+		return a.a[index]
+	}
+	return arg{}
+}
+func (a args) Count() int {
+	return len(a.a)
+}
+
+func (a args) Raw() string {
+	return a.raw
+}
+
+type Args interface {
+	At(int) Arg
+	Count() int
+	Raw() string
+}
+
+//String treats the arg as string
+func (a arg) String() (string, bool) {
 	val, ok := a.arg.(string)
 	return val, ok
 }
 
-func (a Arg) Float() (float64, bool) {
-	val, ok := a.arg.(float64)
-	return val, ok
+//Float treats the arg as float
+func (a arg) Float() (float64, bool) {
+
+	if val, ok := a.arg.(string); ok {
+		if f, err := strconv.ParseFloat(val, 64); err == nil {
+			return f, true
+		}
+		return 0, false
+	}
+	// log.Println(reflect.TypeOf(a.arg))
+	return 0, false
 }
 
-func (a Arg) Mention() (SessionInterface, bool) {
-	val, ok := a.arg.(SessionInterface)
-	return val, ok
+//Mention treats the arg as SessionInterface
+func (a arg) Mention() (SessionInterface, bool) {
+	if val, ok := a.arg.(mention); ok {
+		s, ok := val.s.(SessionInterface)
+		return s, ok
+	}
+	return nil, false
 }
 
-func (a Arg) NewSession() bool {
+//NewSession treats the arg as flag if the session in arg is new
+func (a arg) NewSession() (SessionInterface, bool) {
 	val, ok := a.arg.(SessionInterface)
 	if ok && val.IsNew() {
-		return true
+		return val, true
 	}
-	return false
+	return nil, false
 }
 
-func (a Arg) LeftSession() bool {
+//LeftSession treats the arg as flag if the session in arg is left
+func (a arg) LeftSession() (SessionInterface, bool) {
 	val, ok := a.arg.(SessionInterface)
-	if ok && val.IsLeft() {
-		return true
+	if ok && val.HasLeft() {
+		return val, true
 	}
-	return false
+	return nil, false
 }
 
-type CommandAliaser func(string) (string, []ArgInterface, bool)
-
-func ArgsParser(tgUpdate tgbotapi.Update, sessionFactory SessionFactory, aliaser CommandAliaser) []ArgInterface {
-
-	text := ""
-	type mention struct {
-		t string
-		s SessionInterface
+//LeftSession treats the arg as flag if the session in arg is left
+func (a arg) ComeSession() (SessionInterface, bool) {
+	val, ok := a.arg.(SessionInterface)
+	if ok && val.HasCome() {
+		return val, true
 	}
+	return nil, false
+}
+
+//CommandAliaser converts any text to cmd and args
+type CommandAliaser func(string) (string, Args, bool)
+
+type mention struct {
+	t string
+	s interface{}
+}
+
+func extractMentions(tgUpdate tgbotapi.Update, sessionFactory SessionFactory) (mentions []mention) {
+	if tgUpdate.Message.Entities != nil {
+		for _, ent := range *tgUpdate.Message.Entities {
+			switch {
+			case ent.Type == "text_mention" && ent.User != nil:
+
+				if s, err := sessionFactory(SessionBase{int64(ent.User.ID), ent.User.UserName, tgUpdate.Message.Chat.ID, false, false}); err == nil {
+
+					mentions = append(mentions, mention{string([]rune(tgUpdate.Message.Text)[ent.Offset : ent.Offset+ent.Length]), s})
+				}
+
+			case ent.Type == "mention":
+				userName := string([]rune(tgUpdate.Message.Text)[ent.Offset+1 : ent.Offset+ent.Length])
+				if s, err := sessionFactory(SessionBase{0, userName, tgUpdate.Message.Chat.ID, false, false}); err == nil {
+					mentions = append(mentions, mention{string([]rune(tgUpdate.Message.Text)[ent.Offset : ent.Offset+ent.Length]), s})
+				}
+			}
+		}
+	}
+	return
+}
+
+//ArgsParser parses arguments from Update
+func ArgsParser(tgUpdate tgbotapi.Update, sessionFactory SessionFactory, aliaser CommandAliaser) Args {
+	text := ""
+
 	mentions := []mention{}
 
 	switch {
@@ -65,31 +143,16 @@ func ArgsParser(tgUpdate tgbotapi.Update, sessionFactory SessionFactory, aliaser
 		text = tgUpdate.Message.Text
 
 		if tgUpdate.Message.NewChatMember != nil {
-			s, _ := sessionFactory(SessionBase{int64(tgUpdate.Message.NewChatMember.ID), tgUpdate.Message.NewChatMember.UserName, tgUpdate.Message.Chat.ID, true, false})
-			return []ArgInterface{Arg{s}}
-		}
-		if tgUpdate.Message.LeftChatMember != nil {
-			s, _ := sessionFactory(SessionBase{int64(tgUpdate.Message.LeftChatMember.ID), tgUpdate.Message.LeftChatMember.UserName, tgUpdate.Message.Chat.ID, false, true})
-			return []ArgInterface{Arg{s}}
-		}
-		if tgUpdate.Message.Entities != nil {
-			for _, ent := range *tgUpdate.Message.Entities {
-				switch {
-				case ent.Type == "text_mention" && ent.User != nil:
-
-					if s, err := sessionFactory(SessionBase{int64(ent.User.ID), ent.User.UserName, tgUpdate.Message.Chat.ID, false, false}); err != nil {
-
-						mentions = append(mentions, mention{string([]rune(text)[ent.Offset : ent.Offset+ent.Length]), s})
-					}
-
-				case ent.Type == "mention":
-					userName := string([]rune(text)[ent.Offset+1 : ent.Offset+ent.Length])
-					if s, err := sessionFactory(SessionBase{0, userName, tgUpdate.Message.Chat.ID, false, false}); err != nil {
-						mentions = append(mentions, mention{string([]rune(text)[ent.Offset : ent.Offset+ent.Length]), s})
-					}
-				}
+			if s, err := sessionFactory(SessionBase{int64(tgUpdate.Message.NewChatMember.ID), tgUpdate.Message.NewChatMember.UserName, tgUpdate.Message.Chat.ID, true, false}); err == nil {
+				return args{[]arg{arg{s}}, ""}
 			}
 		}
+		if tgUpdate.Message.LeftChatMember != nil {
+			if s, err := sessionFactory(SessionBase{int64(tgUpdate.Message.LeftChatMember.ID), tgUpdate.Message.LeftChatMember.UserName, tgUpdate.Message.Chat.ID, false, true}); err == nil {
+				return args{[]arg{arg{s}}, ""}
+			}
+		}
+		mentions = extractMentions(tgUpdate, sessionFactory)
 	case tgUpdate.CallbackQuery != nil:
 		text = tgUpdate.CallbackQuery.Data
 	}
@@ -97,7 +160,7 @@ func ArgsParser(tgUpdate tgbotapi.Update, sessionFactory SessionFactory, aliaser
 	if _, args, ok := aliaser(text); ok {
 		return args
 	}
-	retArgs := []ArgInterface{}
+	retArgs := []arg{}
 
 	splitted := []string{}
 	for _, a := range strings.Split(text, " ") {
@@ -116,17 +179,16 @@ func ArgsParser(tgUpdate tgbotapi.Update, sessionFactory SessionFactory, aliaser
 			}
 		}
 		if mfound != -1 {
-			retArgs = append(retArgs, Arg{mentions[mfound].s})
-		} else if val, ok := strconv.ParseFloat(str, 64); ok == nil {
-			retArgs = append(retArgs, Arg{val})
+			retArgs = append(retArgs, arg{mentions[mfound]})
 		} else {
-			retArgs = append(retArgs, Arg{str})
+			retArgs = append(retArgs, arg{str})
 		}
 	}
 
-	return retArgs
+	return args{retArgs, text}
 }
 
+//CmdParser parses command from Update
 func CmdParser(tgUpdate tgbotapi.Update, aliaser CommandAliaser) string {
 	text := ""
 

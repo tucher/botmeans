@@ -12,7 +12,7 @@ import (
 var DB *gorm.DB
 var DBErr error
 
-var bot *MeansBot2
+var bot *MeansBot
 
 func TestMain(t *testing.T) {
 	if os.Getenv("DONT_SKIP_MAIN") != "TRUE" {
@@ -26,7 +26,7 @@ func TestMain(t *testing.T) {
 		t.Fatal(DBErr)
 	}
 	var err error
-	bot, err = New2(DB, NetConfig{ListenIP: "0.0.0.0", ListenPort: 7654}, TelegramConfig{BotToken: os.Getenv("BOT_TOKEN"),
+	bot, err = New(DB, NetConfig{ListenIP: "0.0.0.0", ListenPort: 7654}, TelegramConfig{BotToken: os.Getenv("BOT_TOKEN"),
 		WebhookHost: os.Getenv("HOST"),
 		SSLCertFile: "./cert.pem"})
 	if err != nil {
@@ -53,7 +53,7 @@ func TestMain(t *testing.T) {
 		}
 		return
 	}
-	bot.Run(handlersProvider, "")
+	bot.Run(handlersProvider)
 	enoughChan := time.After(time.Second * 2)
 	for {
 		select {

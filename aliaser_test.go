@@ -33,13 +33,13 @@ func TestAliaser(t *testing.T) {
 		if cmd != "/cmd1" {
 			t.Error()
 		}
-		if len(args) != 2 {
+		if args.Count() != 2 {
 			t.Error()
 		} else {
-			if a, _ := args[0].String(); a != "bla" {
+			if a, _ := args.At(0).String(); a != "bla" {
 				t.Error()
 			}
-			if a, _ := args[1].String(); a != "bla" {
+			if a, _ := args.At(1).String(); a != "bla" {
 				t.Error()
 			}
 		}
@@ -50,7 +50,7 @@ func TestAliaser(t *testing.T) {
 		if cmd != "/cmd2" {
 			t.Error()
 		}
-		if len(args) > 0 {
+		if args.Count() > 0 {
 			t.Error()
 		}
 	} else {
@@ -60,7 +60,7 @@ func TestAliaser(t *testing.T) {
 		if cmd != "/cmd3" {
 			t.Error()
 		}
-		if len(args) > 0 {
+		if args.Count() > 0 {
 			t.Error()
 		}
 	} else {
@@ -70,16 +70,18 @@ func TestAliaser(t *testing.T) {
 		if cmd != "/fffuuu" {
 			t.Error()
 		}
-		if len(args) != 3 {
+		if args.Count() != 3 {
 			t.Error()
 		} else {
-			if a, _ := args[0].Float(); a != 9.87 {
+			if a, _ := args.At(0).Float(); a != 9.87 {
+				t.Log(a)
 				t.Error()
 			}
-			if a, _ := args[1].String(); a != "qwe" {
+			if a, _ := args.At(1).String(); a != "qwe" {
 				t.Error()
 			}
-			if a, _ := args[2].Float(); a != 10.5 {
+			if a, _ := args.At(2).Float(); a != 10.5 {
+				t.Log(a)
 				t.Error()
 			}
 		}

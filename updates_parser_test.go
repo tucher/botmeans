@@ -8,7 +8,6 @@ import (
 )
 
 func TestUpdatesParser(t *testing.T) {
-
 	handlersProvider := func(id string) (ActionHandler, bool) {
 		switch id {
 		case "cmd1":
@@ -20,18 +19,18 @@ func TestUpdatesParser(t *testing.T) {
 		return nil, false
 	}
 	actionFactory := func(
-		session SessionInterface,
-		cmdGetter func() string,
-		argsGetter func() []ArgInterface,
-		sourceMessageGetter func() BotMessageInterface,
+		sessionBase SessionBase,
+		sessionFactory SessionFactory,
+		getters actionExecuterFactoryConfig,
 		out chan Executer,
 	) {
 		ActionFactory(
-			session,
-			cmdGetter,
-			argsGetter,
-			sourceMessageGetter,
-			&Sender{session: session, msgFactory: func() BotMessageInterface { return &BotMessage{} }},
+			sessionBase,
+			sessionFactory,
+			getters,
+			func(senderSession) SenderInterface {
+				return nil
+			},
 			out,
 			handlersProvider,
 		)
@@ -46,14 +45,15 @@ func TestUpdatesParser(t *testing.T) {
 		_, ok := sessionIdFlags[stringID]
 		sessionIdFlags[stringID] = struct{}{}
 		mutex.Unlock()
-		base.isNew = !ok
-		return &Session{SessionBase: base, db: nil}, nil
+		return &Session{SessionBase: base, db: nil, isNew: !ok}, nil
 	}
 
-	aliaser := func(string) (string, []ArgInterface, bool) { return "", []ArgInterface{}, false }
+	aliaser := func(string) (string, Args, bool) { return "", args{}, false }
 
-	argsParser := func(tgUpdate tgbotapi.Update) []ArgInterface {
-		return ArgsParser(tgUpdate, sessionFactory, aliaser)
+	argsParser := func(tgUpdate tgbotapi.Update) (r Args) {
+		r = ArgsParser(tgUpdate, sessionFactory, aliaser)
+		// t.Logf("%+v", r)
+		return
 	}
 
 	cmdParser := func(tgUpdate tgbotapi.Update) string {
@@ -68,15 +68,17 @@ func TestUpdatesParser(t *testing.T) {
 
 	actionsChan := createTGUpdatesParser(
 		updatesChan,
-		sessionFactory,
-		actionFactory,
-		botMsgFactory,
-		cmdParser,
-		argsParser,
+		parserConfig{
+			sessionFactory,
+			actionFactory,
+			botMsgFactory,
+			cmdParser,
+			argsParser,
+		},
 	)
 	type TestEntry struct {
 		tgUpdate tgbotapi.Update
-		result   []*Action2
+		result   []*Action
 	}
 	testData := []TestEntry{
 		TestEntry{
@@ -87,16 +89,20 @@ func TestUpdatesParser(t *testing.T) {
 					Text: "blabla",
 				},
 			},
-			[]*Action2{
-				&Action2{
-					session:    &Session{SessionBase: SessionBase{42, "fuuu", 24, true, false}},
-					cmdGetter:  func() string { return "" },
-					argsGetter: func() []ArgInterface { return []ArgInterface{Arg{}, Arg{"blabla"}} },
+			[]*Action{
+				&Action{
+					session: &Session{SessionBase: SessionBase{42, "fuuu", 24, false, false}, isNew: true},
+					getters: actionExecuterFactoryConfig{
+						cmdGetter:  func() string { return "" },
+						argsGetter: func() Args { return args{[]arg{arg{}}, "session"} },
+					},
 				},
-				&Action2{
-					session:    &Session{SessionBase: SessionBase{42, "fuuu", 24, true, false}},
-					cmdGetter:  func() string { return "" },
-					argsGetter: func() []ArgInterface { return []ArgInterface{Arg{"blabla"}} },
+				&Action{
+					session: &Session{SessionBase: SessionBase{42, "fuuu", 24, false, false}, isNew: true},
+					getters: actionExecuterFactoryConfig{
+						cmdGetter:  func() string { return "" },
+						argsGetter: func() Args { return args{[]arg{arg{"blabla"}}, "blabla"} },
+					},
 				},
 			},
 		},
@@ -108,11 +114,13 @@ func TestUpdatesParser(t *testing.T) {
 					Text: "/cmd1",
 				},
 			},
-			[]*Action2{
-				&Action2{
-					session:    &Session{SessionBase: SessionBase{42, "fuuu", 24, false, false}},
-					cmdGetter:  func() string { return "cmd1" },
-					argsGetter: func() []ArgInterface { return []ArgInterface{Arg{"/cmd1"}} },
+			[]*Action{
+				&Action{
+					session: &Session{SessionBase: SessionBase{42, "fuuu", 24, false, false}},
+					getters: actionExecuterFactoryConfig{
+						cmdGetter:  func() string { return "cmd1" },
+						argsGetter: func() Args { return args{[]arg{arg{"/cmd1"}}, "/cmd1"} },
+					},
 				},
 			},
 		},
@@ -124,11 +132,13 @@ func TestUpdatesParser(t *testing.T) {
 					Text: "/cmd1 ffuuu 9.75",
 				},
 			},
-			[]*Action2{
-				&Action2{
-					session:    &Session{SessionBase: SessionBase{42, "fuuu", 24, false, false}},
-					cmdGetter:  func() string { return "cmd1" },
-					argsGetter: func() []ArgInterface { return []ArgInterface{Arg{"/cmd1"}, Arg{"ffuuu"}, Arg{9.75}} },
+			[]*Action{
+				&Action{
+					session: &Session{SessionBase: SessionBase{42, "fuuu", 24, false, false}},
+					getters: actionExecuterFactoryConfig{
+						cmdGetter:  func() string { return "cmd1" },
+						argsGetter: func() Args { return args{[]arg{arg{"/cmd1"}, arg{"ffuuu"}, arg{"9.75"}}, "/cmd1 ffuuu 9.75"} },
+					},
 				},
 			},
 		},
@@ -136,8 +146,8 @@ func TestUpdatesParser(t *testing.T) {
 	fail := false
 
 	for _, testEntry := range testData {
-
 		updatesChan <- testEntry.tgUpdate
+
 		lastIndex := 0
 
 		for a := range actionsChan {
@@ -157,23 +167,26 @@ func TestUpdatesParser(t *testing.T) {
 				t.Log("Should be nil")
 				fail = true
 			case a != nil && testEntry.result[lastIndex] != nil:
-				if action, ok := a.(*Action2); ok {
+				if action, ok := a.(*Action); ok {
 					if *(action.session.(*Session)) != *testEntry.result[lastIndex].session.(*Session) {
 						fail = true
 						t.Log("Session content is wrong: ", *(action.session.(*Session)), *testEntry.result[lastIndex].session.(*Session))
 					}
-					if action.cmdGetter() != testEntry.result[lastIndex].cmdGetter() {
+					if action.getters.cmdGetter() != testEntry.result[lastIndex].getters.cmdGetter() {
 						fail = true
-						t.Log("Wrong cmd", action.cmdGetter(), testEntry.result[lastIndex].cmdGetter())
+						t.Log("Wrong cmd", action.getters.cmdGetter(), testEntry.result[lastIndex].getters.cmdGetter())
 					}
-					if len(action.argsGetter()) != len(testEntry.result[lastIndex].argsGetter()) {
+					if action.getters.argsGetter().Count() != testEntry.result[lastIndex].getters.argsGetter().Count() {
 						fail = true
-						t.Log("Wrong args len", action.argsGetter(), testEntry.result[lastIndex].argsGetter())
+						t.Log("Wrong args len", action.getters.argsGetter().Raw(), testEntry.result[lastIndex].getters.argsGetter().Raw())
 					} else {
-						for i, _ := range action.argsGetter() {
-							if action.argsGetter()[i] != testEntry.result[lastIndex].argsGetter()[i] && action.argsGetter()[i].NewSession() != true {
+						for i := range make([]int, action.getters.argsGetter().Count()) {
+							_, ok := action.getters.argsGetter().At(i).NewSession()
+							a1, _ := action.getters.argsGetter().At(i).String()
+							a2, _ := testEntry.result[lastIndex].getters.argsGetter().At(i).String()
+							if a1 != a2 && ok != true {
 								fail = true
-								t.Log("Wrong arg: ", action.argsGetter()[i], testEntry.result[lastIndex].argsGetter()[i])
+								t.Log("Wrong arg: ", a1, a2)
 								break
 							}
 						}

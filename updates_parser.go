@@ -5,35 +5,43 @@ import (
 	"sync"
 )
 
-type SessionInterface interface {
-	ChatIdentifier
-	PersistentSaver
-	DataGetSetter
-	IsNew() bool
-	IsLeft() bool
-	Locale() string
+//ChatIdentifier defines something that knows which chat it belongs to
+type ChatIdentifier interface {
+	ChatId() int64
 }
 
+//SessionFactory creates the session from given session base
 type SessionFactory func(base SessionBase) (SessionInterface, error)
+
+//ActionExecuterFactory creates Executers from given session, cmd, args and source message
 type ActionExecuterFactory func(
-	SessionInterface,
-	func() string,
-	func() []ArgInterface,
-	func() BotMessageInterface,
+	SessionBase,
+	SessionFactory,
+	actionExecuterFactoryConfig,
 	chan Executer,
 )
 
+//BotMessageFactory loads bot message from given chat id, msg id and callback id
 type BotMessageFactory func(int64, int64, string) BotMessageInterface
+
+//CmdParserFunc returns command for the given update
 type CmdParserFunc func(tgbotapi.Update) string
-type ArgsParserFunc func(tgbotapi.Update) []ArgInterface
+
+//ArgsParserFunc returns args of command for the given update
+type ArgsParserFunc func(tgbotapi.Update) Args
+
+type parserConfig struct {
+	sessionFactory        SessionFactory
+	actionExecuterFactory ActionExecuterFactory
+	botMessageFactory     BotMessageFactory
+	cmdParser             CmdParserFunc
+	argsParser            ArgsParserFunc
+}
 
 func createTGUpdatesParser(
 	tgUpdateChan <-chan tgbotapi.Update,
-	sessionFactory SessionFactory,
-	actionExecuterFactory ActionExecuterFactory,
-	botMessageFactory BotMessageFactory,
-	cmdParser CmdParserFunc,
-	argsParser ArgsParserFunc) chan Executer {
+	pC parserConfig,
+) chan Executer {
 
 	cmdQueueChan := make(chan Executer)
 	go func() {
@@ -54,8 +62,8 @@ func createTGUpdatesParser(
 					msg = tgUpdate.Message
 				case tgUpdate.CallbackQuery != nil:
 					chatId = tgUpdate.CallbackQuery.Message.Chat.ID
-					userId = int64(tgUpdate.CallbackQuery.Message.From.ID)
-					username = tgUpdate.CallbackQuery.Message.From.UserName
+					userId = int64(tgUpdate.CallbackQuery.From.ID)
+					username = tgUpdate.CallbackQuery.From.UserName
 					msg = tgUpdate.CallbackQuery.Message
 					msgId = int64(msg.MessageID)
 					callbackID = tgUpdate.CallbackQuery.ID
@@ -69,14 +77,16 @@ func createTGUpdatesParser(
 
 				}
 
-				session, _ := sessionFactory(SessionBase{TelegramUserID: userId, TelegramUserName: username, TelegramChatID: chatId})
-
-				actionExecuterFactory(
-					session,
-					func() string { return cmdParser(tgUpdate) },
-					func() []ArgInterface { return argsParser(tgUpdate) },
-					func() BotMessageInterface { return botMessageFactory(chatId, msgId, callbackID) },
+				pC.actionExecuterFactory(
+					SessionBase{TelegramUserID: userId, TelegramUserName: username, TelegramChatID: chatId},
+					pC.sessionFactory,
+					actionExecuterFactoryConfig{
+						func() string { return pC.cmdParser(tgUpdate) },
+						func() Args { return pC.argsParser(tgUpdate) },
+						func() BotMessageInterface { return pC.botMessageFactory(chatId, msgId, callbackID) },
+					},
 					cmdQueueChan)
+
 				wg.Done()
 			}()
 		}
