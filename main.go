@@ -3,14 +3,15 @@ package botmeans
 
 import (
 	"fmt"
-	"github.com/go-telegram-bot-api/telegram-bot-api"
-	"github.com/jinzhu/gorm"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/go-telegram-bot-api/telegram-bot-api"
+	"github.com/jinzhu/gorm"
 )
 
 //MeansBot is a body of botmeans framework instance.
@@ -55,13 +56,15 @@ func New(DB *gorm.DB, netConfig NetConfig, tlgConfig TelegramConfig) (*MeansBot,
 	if os.Getenv("BOTMEANS_SET_WEBHOOK") == "TRUE" {
 
 		ret.bot.RemoveWebhook()
-		_, err = ret.bot.SetWebhook(tgbotapi.NewWebhookWithCert(fmt.Sprintf("https://%v:8443/%v", ret.tlgConfig.WebhookHost, ret.bot.Token),
-			ret.tlgConfig.SSLCertFile))
+		webhookConfig := tgbotapi.NewWebhookWithCert(fmt.Sprintf("https://%v:8443/%v", ret.tlgConfig.WebhookHost, ret.bot.Token),
+			ret.tlgConfig.SSLCertFile)
+		webhookConfig.MaxConnections = 50
+		_, err = ret.bot.SetWebhook(webhookConfig)
 		if err != nil {
 			return nil, err
-		} else {
-			log.Println("Webhook set")
 		}
+		info, _ := ret.bot.GetWebhookInfo()
+		log.Printf("Webhook set: %+v", info)
 	}
 
 	SessionInitDB(DB)

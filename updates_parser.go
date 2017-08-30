@@ -1,8 +1,9 @@
 package botmeans
 
 import (
-	"github.com/go-telegram-bot-api/telegram-bot-api"
 	"sync"
+
+	"github.com/go-telegram-bot-api/telegram-bot-api"
 )
 
 //ChatIdentifier defines something that knows which chat it belongs to
@@ -54,6 +55,7 @@ func createTGUpdatesParser(
 				var msg *tgbotapi.Message
 				var msgId int64
 				var callbackID string
+
 				switch {
 				case tgUpdate.Message != nil:
 					chatId = tgUpdate.Message.Chat.ID

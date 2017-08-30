@@ -58,8 +58,8 @@ func (f *Sender) Create(templateName string, Data interface{}) error {
 	if params.replyKbdMarkup != nil {
 		toSent.ReplyMarkup = *params.replyKbdMarkup
 	}
-	if params.replyKbdHide != nil {
-		toSent.ReplyMarkup = params.replyKbdHide
+	if params.replyKbdRemove != nil {
+		toSent.ReplyMarkup = params.replyKbdRemove
 	}
 
 	if params.inlineKbdMarkup != nil {

@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/go-telegram-bot-api/telegram-bot-api"
 	"io/ioutil"
 	"strings"
 	"text/template"
 	"unicode"
+
+	"github.com/go-telegram-bot-api/telegram-bot-api"
 )
 
 func getTemplater() *template.Template {
@@ -49,7 +50,7 @@ type tgMsgParams struct {
 	text            string
 	inlineKbdMarkup *tgbotapi.InlineKeyboardMarkup
 	replyKbdMarkup  *tgbotapi.ReplyKeyboardMarkup
-	replyKbdHide    *tgbotapi.ReplyKeyboardHide
+	replyKbdRemove  *tgbotapi.ReplyKeyboardRemove
 }
 
 func renderFromTemplate(
@@ -75,8 +76,8 @@ func renderFromTemplate(
 	ret.inlineKbdMarkup = createInlineKeyboard(msgTemplate.Keyboard[locale])
 	ret.replyKbdMarkup = createReplyKeyboard(msgTemplate.ReplyKeyboard[locale])
 	if len(msgTemplate.ReplyKeyboard[locale]) == 0 {
-		h := tgbotapi.NewHideKeyboard(true)
-		ret.replyKbdHide = &h
+		h := tgbotapi.NewRemoveKeyboard(true)
+		ret.replyKbdRemove = &h
 	}
 
 	return ret, err
