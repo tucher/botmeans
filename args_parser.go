@@ -143,14 +143,13 @@ func ArgsParser(tgUpdate tgbotapi.Update, sessionFactory SessionFactory, aliaser
 		text = tgUpdate.Message.Text
 
 		if tgUpdate.Message.NewChatMembers != nil {
-			sList := []arg{}
-			for _, ncm := range *tgUpdate.Message.NewChatMembers {
-				if s, err := sessionFactory(SessionBase{int64(ncm.ID), ncm.UserName, tgUpdate.Message.Chat.ID, true, false}); err == nil {
-					sList = append(sList, arg{s})
-					return args{[]arg{arg{s}}, ""}
+			retArgs := []arg{}
+			for _, newMember := range *tgUpdate.Message.NewChatMembers {
+				if s, err := sessionFactory(SessionBase{int64(newMember.ID), newMember.UserName, tgUpdate.Message.Chat.ID, true, false}); err == nil {
+					retArgs = append(retArgs, arg{s})
 				}
 			}
-			return args{sList, ""}
+			return args{retArgs, ""}
 		}
 		if tgUpdate.Message.LeftChatMember != nil {
 			if s, err := sessionFactory(SessionBase{int64(tgUpdate.Message.LeftChatMember.ID), tgUpdate.Message.LeftChatMember.UserName, tgUpdate.Message.Chat.ID, false, true}); err == nil {
