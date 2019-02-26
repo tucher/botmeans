@@ -12,8 +12,12 @@ services:
   - postgresql
 
 before_script:
-  - psql -c 'create database MeansBot;' -U postgres
+  - psql -c 'create database test;' -U postgres
   - export MEANS_DB_USERNAME=postgres
-  - export MEANS_DBNAME=meansbot
+  - export MEANS_DBNAME=test
 addons:
-  postgresql: "11.2"
+  postgresql: "11"
+  apt:
+    packages:
+    - postgresql-11
+    - postgresql-client-11
