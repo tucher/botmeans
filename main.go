@@ -115,9 +115,17 @@ func (ui *MeansBot) Run(handlersProvider ActionHandlersProvider) chan interface{
 	botMsgFactory := func(chatID int64, msgId int64, callbackID string) BotMessageInterface {
 		return BotMessageDBLoader(chatID, msgId, callbackID, ui.db)
 	}
-	updatesChan := ui.bot.ListenForWebhook("/" + ui.bot.Token)
-
-	go http.ListenAndServe(fmt.Sprintf("%v:%v", ui.netConfig.ListenIP, ui.netConfig.ListenPort), nil)
+	var updatesChan tgbotapi.UpdatesChannel
+	if ui.tlgConfig.WebhookHost != "" {
+		updatesChan = ui.bot.ListenForWebhook("/" + ui.bot.Token)
+		go http.ListenAndServe(fmt.Sprintf("%v:%v", ui.netConfig.ListenIP, ui.netConfig.ListenPort), nil)
+	} else {
+		var err error
+		updatesChan, err = ui.bot.GetUpdatesChan(tgbotapi.UpdateConfig{Offset: 0, Limit: 100, Timeout: 10})
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+	}
 
 	actionsChan := createTGUpdatesParser(
 		updatesChan,
