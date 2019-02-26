@@ -142,10 +142,14 @@ func ArgsParser(tgUpdate tgbotapi.Update, sessionFactory SessionFactory, aliaser
 	case tgUpdate.Message != nil:
 		text = tgUpdate.Message.Text
 
-		if tgUpdate.Message.NewChatMember != nil {
-			if s, err := sessionFactory(SessionBase{int64(tgUpdate.Message.NewChatMember.ID), tgUpdate.Message.NewChatMember.UserName, tgUpdate.Message.Chat.ID, true, false}); err == nil {
-				return args{[]arg{arg{s}}, ""}
+		if tgUpdate.Message.NewChatMembers != nil {
+			retArgs := []arg{}
+			for _, newMember := range *tgUpdate.Message.NewChatMembers {
+				if s, err := sessionFactory(SessionBase{int64(newMember.ID), newMember.UserName, tgUpdate.Message.Chat.ID, true, false}); err == nil {
+					retArgs = append(retArgs, arg{s})
+				}
 			}
+			return args{retArgs, ""}
 		}
 		if tgUpdate.Message.LeftChatMember != nil {
 			if s, err := sessionFactory(SessionBase{int64(tgUpdate.Message.LeftChatMember.ID), tgUpdate.Message.LeftChatMember.UserName, tgUpdate.Message.Chat.ID, false, true}); err == nil {
@@ -194,7 +198,7 @@ func CmdParser(tgUpdate tgbotapi.Update, aliaser CommandAliaser) string {
 
 	switch {
 	case tgUpdate.Message != nil:
-		if tgUpdate.Message.NewChatMember != nil || tgUpdate.Message.LeftChatMember != nil {
+		if tgUpdate.Message.NewChatMembers != nil || tgUpdate.Message.LeftChatMember != nil {
 			return ""
 		}
 		text = tgUpdate.Message.Text
