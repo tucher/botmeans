@@ -4,16 +4,17 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/jinzhu/gorm"
-	"github.com/kardianos/osext"
-	_ "github.com/lib/pq"
-	"github.com/tucher/botmeans"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
+
+	"github.com/jinzhu/gorm"
+	_ "github.com/lib/pq"
+	"github.com/tucher/botmeans"
 )
 
 type PinnedMsg struct {
@@ -120,7 +121,12 @@ type Config struct {
 }
 
 func getConfig(val interface{}) error {
-	folderPath, err := osext.ExecutableFolder()
+	ex, err := os.Executable()
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	folderPath := filepath.Dir(ex)
 
 	if err != nil {
 		fmt.Println(err)

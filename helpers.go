@@ -1,14 +1,7 @@
 package botmeans
 
 import (
-	// 	"encoding/json"
-	// 	"fmt"
-	// 	"github.com/go-telegram-bot-api/telegram-bot-api"
-	// 	"io/ioutil"
 	"reflect"
-	// 	"strings"
-	// 	"text/template"
-	// "log"
 )
 
 type Identifiable interface {

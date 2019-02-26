@@ -2,8 +2,6 @@ package botmeans
 
 import (
 	"github.com/go-telegram-bot-api/telegram-bot-api"
-	// "log"
-	// "reflect"
 	"strconv"
 	"strings"
 )
