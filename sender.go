@@ -151,8 +151,11 @@ func (f *Sender) Edit(msg BotMessageInterface, templateName string, Data interfa
 	editConfig.ParseMode = params.ParseMode
 
 	if f.bot != nil {
-		f.bot.Send(editConfig)
+		if _, err := f.bot.Send(editConfig); err != nil {
+			return err
+		}
 	}
+
 	msg.Save()
 	return nil
 }
