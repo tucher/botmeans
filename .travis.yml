@@ -16,4 +16,4 @@ before_script:
   - export MEANS_DB_USERNAME=postgres
   - export MEANS_DBNAME=meansbot
 addons:
-  postgresql: "9.4"
+  postgresql: "11.2"

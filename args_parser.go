@@ -1,9 +1,10 @@
 package botmeans
 
 import (
-	"github.com/go-telegram-bot-api/telegram-bot-api"
 	"strconv"
 	"strings"
+
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 )
 
 //Arg defines the arg type, which is used to pass parsed args through the context
